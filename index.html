@@ -55,9 +55,42 @@
         <span>🏷️ Brand Order</span>
         <span class="drawer-badge" id="badge-brand-order-count">10 Brands</span>
       </button>
+
+      <button class="btn-drawer-toggle active" id="btn-toggle-cooler-zone" title="Toggle Cooler Fixture & Shelves Zone">
+        <span>❄️ Cooler & Shelves</span>
+        <span class="drawer-badge" id="badge-cooler-shelf-count">2 Doors • 5 Shelves</span>
+      </button>
     </div>
 
     <div class="navbar-actions">
+      <!-- User Guide Button -->
+      <button class="btn-secondary" id="btn-open-user-guide" title="Open Interactive User Guide & Quick Reference">
+        <span>📖 User Guide</span>
+      </button>
+
+      <!-- Theme Switcher Menu -->
+      <div class="theme-dropdown-container">
+        <button class="btn-secondary btn-theme-toggle" id="btn-theme-toggle" title="Switch Theme (Dark / Light / Polar Frost)">
+          <span id="theme-toggle-icon">🌙</span>
+          <span id="theme-toggle-text">Dark</span>
+          <span style="font-size: 0.65rem; margin-left: 2px; opacity: 0.7;">▾</span>
+        </button>
+        <div class="theme-menu-dropdown" id="theme-menu-dropdown">
+          <button class="dropdown-item theme-option active" data-theme="dark">
+            <span>🌙 Midnight Dark</span>
+            <span class="theme-check">✓</span>
+          </button>
+          <button class="dropdown-item theme-option" data-theme="light">
+            <span>☀️ Retail Light</span>
+            <span class="theme-check"></span>
+          </button>
+          <button class="dropdown-item theme-option" data-theme="frost">
+            <span>❄️ Polar Frost</span>
+            <span class="theme-check"></span>
+          </button>
+        </div>
+      </div>
+
       <button class="btn-primary-gradient" id="btn-run-optimization">
         <span>🚀 RUN SOLVER</span>
       </button>
@@ -217,14 +250,16 @@
         <thead>
           <tr>
             <th class="th-select" style="width: 45px; text-align: center;">Select</th>
-            <th style="min-width: 200px;">Product Name</th>
-            <th>Brand</th>
-            <th>Category</th>
-            <th>Format & Size</th>
-            <th>Price & Margin</th>
-            <th>Velocity</th>
-            <th style="min-width: 155px; text-align: center;">Min Facings (User Input)</th>
-            <th style="width: 90px; text-align: center;">Status</th>
+            <th class="sortable-th" data-sort="name" style="min-width: 180px;">Product Name <span class="sort-icon" id="sort-icon-name">↕</span></th>
+            <th class="sortable-th" data-sort="brand">Brand <span class="sort-icon" id="sort-icon-brand">↕</span></th>
+            <th class="sortable-th" data-sort="volume" style="min-width: 105px;">Volume (ml) <span class="sort-icon" id="sort-icon-volume">↕</span></th>
+            <th class="sortable-th" data-sort="category">Category <span class="sort-icon" id="sort-icon-category">↕</span></th>
+            <th>Format & Sugar</th>
+            <th class="sortable-th" data-sort="price">Price & Margin <span class="sort-icon" id="sort-icon-price">↕</span></th>
+            <th class="sortable-th" data-sort="velocity">Velocity <span class="sort-icon" id="sort-icon-velocity">↕</span></th>
+            <th class="sortable-th" data-sort="priority" style="min-width: 170px;">Inclusion Priority <span class="sort-icon" id="sort-icon-priority">↕</span></th>
+            <th class="sortable-th" data-sort="min_facings" style="min-width: 140px; text-align: center;">Min Facings <span class="sort-icon" id="sort-icon-min_facings">↕</span></th>
+            <th style="width: 80px; text-align: center;">Status</th>
           </tr>
         </thead>
         <tbody id="sku-table-tbody">
@@ -254,6 +289,86 @@
     <!-- Draggable & Reorderable Brand Flow Container -->
     <div class="brand-sortable-container" id="brand-sortable-container">
       <!-- Rendered dynamically by BrandOrderManager -->
+    </div>
+  </section>
+
+  <!-- INPUT ZONE 3: COOLER FIXTURE & VARIABLE SHELVES SETUP -->
+  <section class="cooler-input-zone" id="cooler-input-zone">
+    <div class="cooler-input-header">
+      <div class="cooler-input-title-group">
+        <span class="filter-zone-badge">ZONE 3</span>
+        <span class="cooler-input-title">❄️ Cooler Fixture & Variable Shelf Configuration:</span>
+        <span class="cooler-input-subtitle">Select commercial cooler model and adjust shelves / clearance heights per door (defaults loaded from CSV)</span>
+      </div>
+      <div class="cooler-input-actions">
+        <button type="button" class="btn-preset-sort secondary" id="btn-zone-reset-defaults">🔄 Reset to CSV Defaults</button>
+      </div>
+    </div>
+
+    <div class="cooler-config-card">
+      <div class="cooler-config-main-row">
+        <!-- Cooler Model Selector -->
+        <div class="cooler-field-block">
+          <label class="field-label" for="select-cooler-model">🏬 Cooler Fixture Model:</label>
+          <div class="custom-select-wrapper">
+            <select id="select-cooler-model" class="cooler-select-large">
+              <!-- Dynamically populated with all models from CSV -->
+            </select>
+          </div>
+        </div>
+
+        <!-- Shelf Count & Auto-Optimization Block -->
+        <div class="cooler-field-block">
+          <div class="field-label-row">
+            <label class="field-label">📏 Shelves per Door (3..15):</label>
+            <label class="auto-shelves-switch" title="Automatically test 3 to 15 shelves and select the configuration that maximizes your active objective">
+              <input type="checkbox" id="chk-auto-shelves">
+              <span class="switch-slider"></span>
+              <span class="switch-label">🤖 Auto-Optimal</span>
+            </label>
+          </div>
+          <div class="shelf-stepper-large" id="zone-shelf-stepper-wrap">
+            <button type="button" class="btn-step-large" id="btn-zone-shelf-minus" title="Decrease Shelves">-</button>
+            <div class="shelf-count-val-box">
+              <strong id="zone-shelf-count-val">5</strong>
+              <span id="zone-shelf-count-suffix">Shelves</span>
+            </div>
+            <button type="button" class="btn-step-large" id="btn-zone-shelf-plus" title="Increase Shelves">+</button>
+          </div>
+          <div class="auto-optimal-indicator" id="zone-auto-indicator" style="display: flex; gap: 0.5rem; margin-top: 0.35rem;">
+            <button type="button" class="btn-recommend-now" id="btn-find-optimal-shelves">
+              <span>💡 Find Optimal Shelves (3..15) 📊</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Cooler Specifications Summary Pill -->
+        <div class="cooler-field-block cooler-summary-block">
+          <label class="field-label">📐 Fixture Dimensions:</label>
+          <div class="cooler-specs-pill" id="zone-cooler-specs-pill">
+            <span id="pill-cooler-doors">2 Doors</span> • <span id="pill-cooler-width">1340mm W</span> • <span id="pill-cooler-height">1980mm H</span> • <span id="pill-cooler-depth">720mm D</span>
+          </div>
+        </div>
+
+        <!-- Toggle Shelf Heights Drawer Button -->
+        <div class="cooler-field-block">
+          <label class="field-label">⚙️ Vertical Clearance:</label>
+          <button type="button" class="btn-toggle-heights-large" id="btn-zone-toggle-heights">
+            <span>⚙️ Adjust Clearance (mm) ▾</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Expandable Shelf Clearance Sliders Grid -->
+      <div class="zone-shelf-heights-drawer" id="zone-shelf-heights-drawer" style="display: none;">
+        <div class="drawer-header-row">
+          <strong>📏 Individual Shelf Clearance Heights (Top to Bottom):</strong>
+          <span class="text-muted text-xs">Adjust vertical clearance per tier to match your physical shelving</span>
+        </div>
+        <div class="zone-shelf-heights-grid" id="zone-shelf-heights-grid">
+          <!-- Rendered dynamically for Shelf 1..N -->
+        </div>
+      </div>
     </div>
   </section>
 
@@ -322,18 +437,20 @@
         </div>
       </div>
 
-      <!-- KPI 3: Volume Occupied & Movement -->
+      <!-- KPI 3: Space Utilization & Volume Occupied -->
       <div class="kpi-card highlight-volume">
         <div class="kpi-header-row">
-          <span class="kpi-label">📦 Volume Occupied & Movement</span>
-          <span class="kpi-badge volume-badge" id="kpi-volume-occupancy-pct">0.0% Vol Occupied</span>
+          <span class="kpi-label">📦 Space Utilization & Volume</span>
+          <span class="kpi-badge volume-badge text-success" id="kpi-volume-occupancy-pct">97.4% Shelf Full (Optimal)</span>
         </div>
         <div class="kpi-value-row">
           <span class="kpi-value text-warning" id="kpi-volume-occupied">0.0 L</span>
           <span class="kpi-subtext" id="kpi-volume-movement-subtext">0 units/day sold</span>
         </div>
         <div class="kpi-footer-metric">
-          <span>Physical Capacity: <strong id="kpi-volume-liters-total">0.0 L Total</strong> (<span id="kpi-fill-rate">0%</span> Width Full)</span>
+          <span>Effective Vol: <strong id="kpi-effective-capacity-pct">0.0% Full</strong> (<span id="kpi-fill-rate">0%</span> Width)</span>
+          <span style="opacity: 0.4; margin: 0 4px;">•</span>
+          <span>Vertical Height Fill: <strong id="kpi-height-util-pct">0.0%</strong> (<span id="kpi-avg-air-gap">0mm</span> headroom)</span>
         </div>
       </div>
 
@@ -359,6 +476,61 @@
       <!-- Left Column: Visual Canvas & Heatmap Controls -->
       <section class="canvas-section">
         
+        <!-- Cooler Model & Variable Shelf Configurator Bar -->
+        <div class="cooler-config-bar" id="cooler-config-bar">
+          <div class="cooler-config-left">
+            <div class="cooler-select-group">
+              <span class="config-label">❄️ Fixture:</span>
+              <select id="select-active-cooler" class="select-cooler-input">
+                <option value="COOLER-2DOOR-STD" selected>Standard 2-Door Commercial Cooler (1340mm W)</option>
+                <option value="COOLER-1DOOR-COMPACT">Compact 1-Door Single Cooler (700mm W)</option>
+                <option value="COOLER-3DOOR-MEGA">Hypermarket 3-Door Mega Cooler (2000mm W)</option>
+              </select>
+            </div>
+
+            <div class="shelf-stepper-group">
+              <span class="config-label">Shelves:</span>
+              <label class="auto-shelves-switch mini" title="Auto-select optimal shelf count for current objective">
+                <input type="checkbox" id="chk-canvas-auto-shelves">
+                <span class="switch-slider"></span>
+                <span class="switch-label">🤖 Auto</span>
+              </label>
+              <div class="stepper-controls" id="canvas-shelf-stepper-wrap">
+                <button type="button" class="btn-shelf-step" id="btn-shelf-minus" title="Decrease Shelf Count">-</button>
+                <span class="shelf-count-display" id="current-shelf-count-val">5 Shelves</span>
+                <button type="button" class="btn-shelf-step" id="btn-shelf-plus" title="Increase Shelf Count">+</button>
+              </div>
+              <button type="button" class="btn-link-compare" id="btn-canvas-compare-scenarios" title="Compare all shelf scenarios from 3 to 15">📊 Compare (3..15)</button>
+            </div>
+          </div>
+
+          <div class="cooler-config-right">
+            <button type="button" class="btn-secondary btn-heights-toggle" id="btn-toggle-shelf-heights">
+              <span>⚙️ Adjust Shelf Heights (mm) ▾</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- AI Optimal Recommendation Alert Banner -->
+        <div class="ai-optimal-alert-banner" id="canvas-optimal-alert-banner" style="display: none;">
+          <div>
+            <strong>🏆 AI Optimal Recommendation:</strong>
+            <span id="canvas-optimal-reason-text">5 Shelves per door yields the highest profit ($1,361.12/day).</span>
+          </div>
+          <button type="button" class="btn-link-compare" id="btn-banner-compare-scenarios">Compare All Scenarios (3..15) 📊</button>
+        </div>
+
+        <!-- Shelf Heights Adjuster Dropdown Drawer -->
+        <div class="shelf-heights-drawer" id="shelf-heights-drawer" style="display: none;">
+          <div class="shelf-heights-header">
+            <strong>📏 Vertical Shelf Clearance Heights (Top to Bottom):</strong>
+            <button type="button" class="btn-preset-sort" id="btn-reset-default-heights">Reset Default Heights</button>
+          </div>
+          <div class="shelf-heights-grid" id="shelf-heights-grid">
+            <!-- Rendered dynamically for Shelf 1..N -->
+          </div>
+        </div>
+
         <!-- Visual Canvas Controls Toolbar -->
         <div class="canvas-toolbar">
           <div class="heatmap-mode-selector">
@@ -479,6 +651,22 @@
                 </thead>
                 <tbody id="category-share-tbody"></tbody>
               </table>
+            <div class="panel-section-title mt-4">
+              <h3>📏 Vertical Shelf Clearance & Headroom</h3>
+            </div>
+            <div class="table-scroll-wrap">
+              <table class="data-table small">
+                <thead>
+                  <tr>
+                    <th>Shelf Tier</th>
+                    <th>Clearance</th>
+                    <th>Pack H</th>
+                    <th>H-Fill %</th>
+                    <th>Air Gap Headroom</th>
+                  </tr>
+                </thead>
+                <tbody id="shelf-height-breakdown-tbody"></tbody>
+              </table>
             </div>
           </div>
 
@@ -492,7 +680,237 @@
         </div>
       </aside>
 
-    </main>
+  <!-- INTERACTIVE USER GUIDE MODAL -->
+  <div class="modal-overlay" id="user-guide-modal" style="display: none;">
+    <div class="modal-card user-guide-modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">📖</span>
+          <div>
+            <h2>Cooler Planogram AI Studio — User Guide & Reference</h2>
+            <span class="modal-subtitle">Comprehensive guide to assortment optimization, brand flow, cooler fixtures, and retail merchandising rules</span>
+          </div>
+        </div>
+        <button type="button" class="btn-close-modal" id="btn-close-user-guide">&times;</button>
+      </div>
+
+      <div class="modal-body user-guide-body">
+        <div class="guide-nav-bar">
+          <button type="button" class="guide-nav-btn active" data-target="guide-tab-workflow">🚀 4-Step Workflow</button>
+          <button type="button" class="guide-nav-btn" data-target="guide-tab-priorities">⭐ Assortment Priorities</button>
+          <button type="button" class="guide-nav-btn" data-target="guide-tab-coolers">❄️ Coolers & Shelves</button>
+          <button type="button" class="guide-nav-btn" data-target="guide-tab-rules">📐 Merchandising Rules</button>
+          <button type="button" class="guide-nav-btn" data-target="guide-tab-kpis">📊 KPIs & Utilization</button>
+        </div>
+
+        <div class="guide-content-area">
+          <!-- Guide Tab 1: Workflow -->
+          <div class="guide-tab-pane active" id="guide-tab-workflow">
+            <h3 class="guide-heading">🚀 Quick Start: 4-Step Merchandising Workflow</h3>
+            <div class="guide-steps-grid">
+              <div class="guide-step-card">
+                <div class="step-badge">STEP 1</div>
+                <h4>Select Assortment (Zone 1)</h4>
+                <p>Filter products by Category, Brand, Pack Size, or Sugar. Set each SKU's <strong>Inclusion Priority</strong> (Must Have / Nice to Have / Must Not Have) and customize <strong>Min Facings</strong>.</p>
+              </div>
+              <div class="guide-step-card">
+                <div class="step-badge">STEP 2</div>
+                <h4>Sequence Brand Flow (Zone 2)</h4>
+                <p>Drag brand cards or use quick presets (<em>⚡ By Velocity</em>, <em>💰 By Margin</em>, <em>🔤 A-Z</em>) to define the horizontal left-to-right brand sequence.</p>
+              </div>
+              <div class="guide-step-card">
+                <div class="step-badge">STEP 3</div>
+                <h4>Choose Fixture & Shelves</h4>
+                <p>Select cooler model (1-Door, 2-Door, 3-Door) and adjust the number of shelves or vertical clearance heights (mm) to fit your store fixtures.</p>
+              </div>
+              <div class="guide-step-card">
+                <div class="step-badge">STEP 4</div>
+                <h4>Choose Goal & Run Solver</h4>
+                <p>Pick an optimization goal (<strong>Profit</strong>, <strong>Revenue</strong>, or <strong>Volume</strong>) and hit <strong class="text-cyan">🚀 RUN SOLVER</strong> to generate an optimal planogram with 0% width overflow!</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Guide Tab 2: Priorities -->
+          <div class="guide-tab-pane" id="guide-tab-priorities">
+            <h3 class="guide-heading">⭐ Product Assortment Inclusion Rules</h3>
+            <div class="guide-table-wrap">
+              <table class="guide-table">
+                <thead>
+                  <tr>
+                    <th>Priority Mode</th>
+                    <th>Icon</th>
+                    <th>Guaranteed Facings</th>
+                    <th>Mathematical Solver Behavior</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Must Have</strong></td>
+                    <td>⭐</td>
+                    <td><span class="badge-guaranteed">&ge; 2 Facings</span></td>
+                    <td>Mandatory core inclusion. Solver pre-allocates space before all other items.</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Nice to Have</strong></td>
+                    <td>✨</td>
+                    <td>&ge; 1 (Optional)</td>
+                    <td>Discretionary assortment. Included based on knapsack marginal yield density & space availability.</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Must Not Have</strong></td>
+                    <td>🚫</td>
+                    <td>0 Facings</td>
+                    <td>Strictly excluded from the cooler fixture (0 facings). Row dimmed in table.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="guide-note">💡 <em>Tip: You can click column headers (<strong>Brand ↕</strong>, <strong>Volume ↕</strong>, <strong>Velocity ↕</strong>) to sort the table instantly!</em></p>
+          </div>
+
+          <!-- Guide Tab 3: Coolers & Shelves -->
+          <div class="guide-tab-pane" id="guide-tab-coolers">
+            <h3 class="guide-heading">❄️ Cooler Fixtures, Variable Shelves & Real Heights</h3>
+            <div class="guide-card-grid">
+              <div class="guide-feature-box">
+                <h4>🏢 5 Built-In Cooler Fixtures from CSV</h4>
+                <ul>
+                  <li><strong>Standard 2-Door (1340mm)</strong>: 2 doors, 5 shelves default.</li>
+                  <li><strong>Compact 1-Door (700mm)</strong>: 1 door, 4 shelves default.</li>
+                  <li><strong>Hypermarket 3-Door (2050mm)</strong>: 3 doors, 5 shelves default.</li>
+                  <li><strong>Slim 2-Door (1120mm)</strong>: 2 doors, 4 shelves default.</li>
+                  <li><strong>Tall 1-Door (850mm)</strong>: 1 door, 6 shelves default.</li>
+                </ul>
+              </div>
+              <div class="guide-feature-box">
+                <h4>📐 Variable Shelf Count & AI Auto-Optimization</h4>
+                <ul>
+                  <li><strong>Manual Control</strong>: Adjust shelves anywhere from <strong>3 to 15 shelves</strong> with <code>[ - ]</code> and <code>[ + ]</code> or customize millimeter clearance.</li>
+                  <li><strong>🤖 Auto-Optimal Mode</strong>: Toggle on to let the AI solver automatically evaluate all candidate counts from <strong>3..15 shelves</strong> and choose the exact count that maximizes your Profit, Revenue, or Volume goal!</li>
+                  <li>Click <code>Compare Scenarios 📊</code> to see comparative profit/revenue/volume yield across all candidate shelf configurations (3 to 15 shelves).</li>
+                </ul>
+              </div>
+              <div class="guide-feature-box">
+                <h4>📏 Proportional Real-World Physical SKU Heights</h4>
+                <ul>
+                  <li>Each SKU visual card is scaled to its exact physical height in mm (e.g. 115mm can vs 150mm carton vs 220mm glass bottle vs 330mm 1.5L bottle).</li>
+                  <li>Products sit on the bottom shelf rack wire with real top headroom variation visible.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Guide Tab 4: Rules -->
+          <div class="guide-tab-pane" id="guide-tab-rules">
+            <h3 class="guide-heading">📐 11 FMCG Merchandising & Rule Audit Constraints</h3>
+            <div class="guide-rules-list">
+              <div class="guide-rule-item">
+                <span class="rule-num">1</span>
+                <div>
+                  <strong>Uniform Shelf Pack Volume (0 Mix)</strong>
+                  <p>Each shelf level is strictly dedicated to a single pack size across all doors (e.g., Shelf 1 = 250ml, Shelf 2 = 330ml, Shelf 5 = 1.5L).</p>
+                </div>
+              </div>
+              <div class="guide-rule-item">
+                <span class="rule-num">2</span>
+                <div>
+                  <strong>Bottom-Heavy Bottle Placement</strong>
+                  <p>Heavy 1.5L large bottles and bulky packs are strictly placed on bottom base shelves for stability and safety.</p>
+                </div>
+              </div>
+              <div class="guide-rule-item">
+                <span class="rule-num">3</span>
+                <div>
+                  <strong>Continuous Multi-Door Brand Flow</strong>
+                  <p>Master brand order flows continuously from Door 1 left to Door N right across each shelf tier without random gaps.</p>
+                </div>
+              </div>
+              <div class="guide-rule-item">
+                <span class="rule-num">4</span>
+                <div>
+                  <strong>Strict Door Width Bound (0% Overflow)</strong>
+                  <p>Placed facings will never exceed physical usable door width (e.g. 610mm per bay).</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Guide Tab 5: KPIs -->
+          <div class="guide-tab-pane" id="guide-tab-kpis">
+            <h3 class="guide-heading">📊 KPIs, Space Utilization & Export Formats</h3>
+            <div class="guide-card-grid">
+              <div class="guide-feature-box">
+                <h4>📦 Space Utilization vs Effective Capacity</h4>
+                <p><strong>Shelf Width Full (97.4%)</strong>: Demonstrates that front-facing shelf width is packed to maximum commercial capacity.</p>
+                <p><strong>Effective Capacity (89.2%)</strong>: Measures 3D volume fill against maximum storable space (excluding retail cold air draft gap).</p>
+              </div>
+              <div class="guide-feature-box">
+                <h4>📏 Vertical Height & Headroom Utilization</h4>
+                <p><strong>Height Fill %</strong>: Calculates the vertical clearance utilized by placed product cans and bottles ($\frac{\text{Product Height}}{\text{Shelf Clearance}} \times 100\%$).</p>
+                <p><strong>Air Gap Headroom (mm)</strong>: Tracks residual space above the cans/cartons ensuring shopper hand-grab ergonomics and proper refrigeration circulation.</p>
+              </div>
+              <div class="guide-feature-box">
+                <h4>🎨 Heatmap Merchandising Overlays</h4>
+                <p>Toggle between <strong>Standard Brands</strong>, <strong>Profit Margin</strong>, <strong>Velocity Demand</strong>, and <strong>Days of Supply (OOS risk)</strong> overlays to analyze shelf performance.</p>
+              </div>
+              <div class="guide-feature-box">
+                <h4>💾 Enterprise Export Capabilities</h4>
+                <p>Export your optimized planogram as <strong>Planogram JSON</strong> (for JDA/Blue Yonder/Apollo systems), <strong>Store Pick-List CSV</strong>, or generate a <strong>Printable Specification Sheet</strong>.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-primary" id="btn-dismiss-user-guide">Got It, Let's Optimize! 🚀</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SHELF SCENARIO COMPARISON MODAL -->
+  <div class="modal-overlay" id="shelf-scenarios-modal" style="display: none;">
+    <div class="modal-card shelf-scenarios-modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">📊</span>
+          <div>
+            <h2>AI Shelf Count Optimization — Scenario Evaluation</h2>
+            <span class="modal-subtitle">Mathematical evaluation of objective yield across 3, 4, 5, and 6 shelves per door</span>
+          </div>
+        </div>
+        <button type="button" class="btn-close-modal" id="btn-close-scenarios">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="scenarios-summary-banner" id="scenarios-summary-banner">
+          <!-- Rendered dynamically -->
+        </div>
+        <div class="table-scroll-wrap">
+          <table class="data-table scenarios-table">
+            <thead>
+              <tr>
+                <th>Shelves / Door</th>
+                <th>Total Facings</th>
+                <th>Daily Margin ($)</th>
+                <th>Daily Revenue ($)</th>
+                <th>Daily Units</th>
+                <th>Shelf Full %</th>
+                <th>Objective Score</th>
+                <th style="text-align: center;">Status / Action</th>
+              </tr>
+            </thead>
+            <tbody id="scenarios-table-tbody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="btn-dismiss-scenarios">Close</button>
+      </div>
+    </div>
   </div>
 
   <!-- Standalone Bundled Script -->
@@ -534,6 +952,14 @@
     btnToggleAssortment?.addEventListener('click', () => {
       filterBar?.classList.toggle('collapsed');
       btnToggleAssortment.classList.toggle('active');
+    });
+
+    // Cooler Zone toggle button
+    const btnToggleCooler = document.getElementById('btn-toggle-cooler-zone');
+    const coolerZone = document.getElementById('cooler-input-zone');
+    btnToggleCooler?.addEventListener('click', () => {
+      coolerZone?.classList.toggle('collapsed');
+      btnToggleCooler.classList.toggle('active');
     });
   </script>
 </body>

@@ -14,6 +14,7 @@ import csv
 import json
 import math
 import sys
+import copy
 import argparse
 from pathlib import Path
 
@@ -344,6 +345,24 @@ def determine_shelf_level_pack_sizes(num_levels, available_skus):
                 mapping[lvl] = unique_sizes[min(idx, len(unique_sizes) - 1)]
             if has_heavy:
                 mapping[num_levels] = "1.5L"
+    elif num_levels == 7:
+        if unique_sizes == ["250ml", "330ml", "500ml", "1.5L"]:
+            mapping = {1: "250ml", 2: "250ml", 3: "330ml", 4: "330ml", 5: "330ml", 6: "500ml", 7: "1.5L"}
+        else:
+            for lvl in range(1, num_levels + 1):
+                idx = int((lvl - 1) / num_levels * len(unique_sizes))
+                mapping[lvl] = unique_sizes[min(idx, len(unique_sizes) - 1)]
+            if has_heavy:
+                mapping[num_levels] = "1.5L"
+    elif num_levels == 8:
+        if unique_sizes == ["250ml", "330ml", "500ml", "1.5L"]:
+            mapping = {1: "250ml", 2: "250ml", 3: "330ml", 4: "330ml", 5: "330ml", 6: "500ml", 7: "500ml", 8: "1.5L"}
+        else:
+            for lvl in range(1, num_levels + 1):
+                idx = int((lvl - 1) / num_levels * len(unique_sizes))
+                mapping[lvl] = unique_sizes[min(idx, len(unique_sizes) - 1)]
+            if has_heavy:
+                mapping[num_levels] = "1.5L"
     else:
         for lvl in range(1, num_levels + 1):
             idx = int((lvl - 1) / num_levels * len(unique_sizes))
@@ -354,14 +373,159 @@ def determine_shelf_level_pack_sizes(num_levels, available_skus):
     return mapping
 
 
+def change_cooler_shelf_count(cooler, count):
+    count = max(3, min(15, count))
+    total_internal_height = max(1450, cooler.get('total_height_mm', 1980) - 480)
+    
+    # Specific calibrated templates for standard retail counts 3..8, procedural for 9..15
+    tier_templates = {
+        3: [
+            {'tier': 'top', 'tier_label': 'Top Shelf', 'clearance_height_mm': 280, 'eye_level_score': 0.60, 'max_weight_kg': 45.0},
+            {'tier': 'eye_level', 'tier_label': 'Eye-Level Golden Zone', 'clearance_height_mm': 320, 'eye_level_score': 1.00, 'max_weight_kg': 50.0},
+            {'tier': 'bottom', 'tier_label': 'Bottom Base Shelf', 'clearance_height_mm': 390, 'eye_level_score': 0.40, 'max_weight_kg': 65.0}
+        ],
+        4: [
+            {'tier': 'top', 'tier_label': 'Top Shelf', 'clearance_height_mm': 270, 'eye_level_score': 0.60, 'max_weight_kg': 45.0},
+            {'tier': 'eye_level', 'tier_label': 'Eye-Level Golden Zone', 'clearance_height_mm': 290, 'eye_level_score': 1.00, 'max_weight_kg': 50.0},
+            {'tier': 'touch_level', 'tier_label': 'Mid-Lower Shelf', 'clearance_height_mm': 310, 'eye_level_score': 0.75, 'max_weight_kg': 50.0},
+            {'tier': 'bottom', 'tier_label': 'Bottom Base Shelf', 'clearance_height_mm': 380, 'eye_level_score': 0.40, 'max_weight_kg': 65.0}
+        ],
+        5: [
+            {'tier': 'top', 'tier_label': 'Top Shelf', 'clearance_height_mm': 270, 'eye_level_score': 0.60, 'max_weight_kg': 45.0},
+            {'tier': 'reach_level', 'tier_label': 'Upper Reach', 'clearance_height_mm': 280, 'eye_level_score': 0.85, 'max_weight_kg': 45.0},
+            {'tier': 'eye_level', 'tier_label': 'Eye-Level Golden Zone', 'clearance_height_mm': 300, 'eye_level_score': 1.00, 'max_weight_kg': 50.0},
+            {'tier': 'touch_level', 'tier_label': 'Mid-Lower Shelf', 'clearance_height_mm': 310, 'eye_level_score': 0.75, 'max_weight_kg': 50.0},
+            {'tier': 'bottom', 'tier_label': 'Bottom Base Shelf', 'clearance_height_mm': 370, 'eye_level_score': 0.40, 'max_weight_kg': 65.0}
+        ],
+        6: [
+            {'tier': 'top', 'tier_label': 'Top Shelf', 'clearance_height_mm': 240, 'eye_level_score': 0.60, 'max_weight_kg': 40.0},
+            {'tier': 'reach_level', 'tier_label': 'Upper Reach', 'clearance_height_mm': 260, 'eye_level_score': 0.85, 'max_weight_kg': 45.0},
+            {'tier': 'eye_level', 'tier_label': 'Eye-Level Golden Zone', 'clearance_height_mm': 280, 'eye_level_score': 1.00, 'max_weight_kg': 50.0},
+            {'tier': 'touch_level', 'tier_label': 'Mid Shelf 1', 'clearance_height_mm': 290, 'eye_level_score': 0.75, 'max_weight_kg': 50.0},
+            {'tier': 'touch_level', 'tier_label': 'Mid Shelf 2', 'clearance_height_mm': 310, 'eye_level_score': 0.65, 'max_weight_kg': 50.0},
+            {'tier': 'bottom', 'tier_label': 'Bottom Base Shelf', 'clearance_height_mm': 370, 'eye_level_score': 0.40, 'max_weight_kg': 65.0}
+        ],
+        7: [
+            {'tier': 'top', 'tier_label': 'Top Shelf', 'clearance_height_mm': 220, 'eye_level_score': 0.60, 'max_weight_kg': 35.0},
+            {'tier': 'reach_level', 'tier_label': 'Upper Reach', 'clearance_height_mm': 240, 'eye_level_score': 0.80, 'max_weight_kg': 40.0},
+            {'tier': 'eye_level', 'tier_label': 'Eye-Level Golden Zone', 'clearance_height_mm': 260, 'eye_level_score': 1.00, 'max_weight_kg': 45.0},
+            {'tier': 'touch_level', 'tier_label': 'Mid Shelf 1', 'clearance_height_mm': 270, 'eye_level_score': 0.85, 'max_weight_kg': 45.0},
+            {'tier': 'touch_level', 'tier_label': 'Mid Shelf 2', 'clearance_height_mm': 280, 'eye_level_score': 0.70, 'max_weight_kg': 45.0},
+            {'tier': 'touch_level', 'tier_label': 'Mid-Lower Shelf', 'clearance_height_mm': 300, 'eye_level_score': 0.55, 'max_weight_kg': 50.0},
+            {'tier': 'bottom', 'tier_label': 'Bottom Base Shelf', 'clearance_height_mm': 370, 'eye_level_score': 0.40, 'max_weight_kg': 65.0}
+        ],
+        8: [
+            {'tier': 'top', 'tier_label': 'Top Shelf', 'clearance_height_mm': 200, 'eye_level_score': 0.50, 'max_weight_kg': 30.0},
+            {'tier': 'reach_level', 'tier_label': 'Upper Reach 1', 'clearance_height_mm': 220, 'eye_level_score': 0.75, 'max_weight_kg': 35.0},
+            {'tier': 'reach_level', 'tier_label': 'Upper Reach 2', 'clearance_height_mm': 240, 'eye_level_score': 0.90, 'max_weight_kg': 40.0},
+            {'tier': 'eye_level', 'tier_label': 'Eye-Level Golden Zone', 'clearance_height_mm': 250, 'eye_level_score': 1.00, 'max_weight_kg': 45.0},
+            {'tier': 'touch_level', 'tier_label': 'Mid Shelf 1', 'clearance_height_mm': 260, 'eye_level_score': 0.80, 'max_weight_kg': 45.0},
+            {'tier': 'touch_level', 'tier_label': 'Mid Shelf 2', 'clearance_height_mm': 270, 'eye_level_score': 0.65, 'max_weight_kg': 45.0},
+            {'tier': 'touch_level', 'tier_label': 'Mid-Lower Shelf', 'clearance_height_mm': 290, 'eye_level_score': 0.50, 'max_weight_kg': 50.0},
+            {'tier': 'bottom', 'tier_label': 'Bottom Base Shelf', 'clearance_height_mm': 360, 'eye_level_score': 0.40, 'max_weight_kg': 65.0}
+        ]
+    }
+
+    if count in tier_templates:
+        template = tier_templates[count]
+    else:
+        # Dynamic procedural generation for 9 to 15 shelves
+        bottom_h = 350
+        remaining_h = total_internal_height - bottom_h
+        avg_upper_h = max(80, int(remaining_h / (count - 1)))
+        template = []
+        for i in range(1, count + 1):
+            if i == 1:
+                tier, tier_label, eye_score, clearance_h = 'top', 'Top Shelf', 0.60, avg_upper_h + 10
+            elif i == count:
+                tier, tier_label, eye_score, clearance_h = 'bottom', 'Bottom Base Shelf', 0.40, bottom_h
+            else:
+                rel_pos = (i - 1) / (count - 1)
+                if 0.25 <= rel_pos <= 0.55:
+                    tier, tier_label, eye_score, clearance_h = 'eye_level', f"Eye-Level Tier {i}", 1.00, avg_upper_h
+                elif rel_pos < 0.25:
+                    tier, tier_label, eye_score, clearance_h = 'reach_level', f"Upper Reach {i}", 0.85, avg_upper_h
+                else:
+                    tier, tier_label, eye_score, clearance_h = 'touch_level', f"Lower Tier {i}", 0.60, avg_upper_h
+            
+            template.append({
+                'tier': tier,
+                'tier_label': tier_label,
+                'clearance_height_mm': clearance_h,
+                'max_weight_kg': max(18.0, float(round(50 - count * 1.8, 1))),
+                'eye_level_score': eye_score
+            })
+
+    for b_idx, bay in enumerate(cooler['bays']):
+        d = bay.get('door_index', b_idx + 1)
+        bay['shelves'] = [{
+            'shelf_id': f"D{d}-S{idx + 1}",
+            'shelf_index': idx + 1,
+            'tier': t['tier'],
+            'tier_label': t['tier_label'],
+            'usable_width_mm': bay['shelves'][0]['usable_width_mm'] if bay.get('shelves') else 610,
+            'usable_depth_mm': 580 if idx == len(template) - 1 else 550,
+            'clearance_height_mm': t['clearance_height_mm'],
+            'max_weight_kg': t['max_weight_kg'],
+            'eye_level_score': t['eye_level_score'],
+            'has_gravity_feed': True,
+            'temperature_zone': 'Chilled (2-4°C)'
+        } for idx, t in enumerate(template)]
+
+
 # =========================================================================
 # MAIN OPTIMIZATION PIPELINE
 # =========================================================================
-def optimize_planogram(skus_csv_path, cooler_csv_path, rules_json_path, cooler_id=None, objective='profit', filters=None, custom_brand_order=None):
+def optimize_planogram(skus_csv_path, cooler_csv_path, rules_json_path, cooler_id=None, objective='profit', filters=None, custom_brand_order=None, auto_shelves=False):
     all_skus = load_skus_csv(skus_csv_path)
     coolers = load_coolers_csv(cooler_csv_path)
     rules = load_json(rules_json_path)
 
+    cooler = next((c for c in coolers if c['cooler_id'] == cooler_id), coolers[0]) if cooler_id else coolers[0]
+
+    if auto_shelves:
+        candidate_counts = list(range(3, 16))
+        best_count = 5
+        best_score = -float('inf')
+        best_res = None
+        comparisons = []
+
+        for count in candidate_counts:
+            test_cooler = copy.deepcopy(cooler)
+            change_cooler_shelf_count(test_cooler, count)
+            # Run single candidate optimization
+            res = _run_optimization_core(all_skus, test_cooler, rules, objective, filters, custom_brand_order)
+            
+            if objective == 'profit':
+                score = res['kpis']['total_profit_daily']
+            elif objective == 'revenue':
+                score = res['kpis']['total_revenue_daily']
+            else:
+                score = res['kpis']['total_volume_movement_units_day']
+
+            comparisons.append({
+                'shelf_count': count,
+                'score': score,
+                'daily_margin': res['kpis']['total_profit_daily'],
+                'daily_revenue': res['kpis']['total_revenue_daily'],
+                'daily_units': res['kpis']['total_volume_movement_units_day'],
+                'total_facings': res['kpis']['total_facings'],
+                'overall_space_utilization_pct': res['kpis']['overall_space_utilization_pct']
+            })
+
+            if score > best_score:
+                best_score = score
+                best_count = count
+                best_res = res
+
+        best_res['scenarios_comparison'] = comparisons
+        best_res['optimal_shelf_count'] = best_count
+        return best_res
+
+    return _run_optimization_core(all_skus, cooler, rules, objective, filters, custom_brand_order)
+
+
+def _run_optimization_core(all_skus, cooler, rules, objective, filters, custom_brand_order):
     # Assortment Filtering
     skus = all_skus
     if filters:
@@ -385,8 +549,6 @@ def optimize_planogram(skus_csv_path, cooler_csv_path, rules_json_path, cooler_i
 
     if not skus:
         skus = all_skus
-
-    cooler = next((c for c in coolers if c['cooler_id'] == cooler_id), coolers[0]) if cooler_id else coolers[0]
     
     # Master Brand Sequence
     if custom_brand_order and len(custom_brand_order) > 0:
@@ -406,6 +568,8 @@ def optimize_planogram(skus_csv_path, cooler_csv_path, rules_json_path, cooler_i
 
     all_shelves = []
     total_cooler_volume_liters = 0.0
+    effective_cooler_storable_volume_liters = 0.0
+    total_cooler_width_mm = 0.0
     for bay in cooler['bays']:
         for shelf in bay['shelves']:
             all_shelves.append({
@@ -415,6 +579,9 @@ def optimize_planogram(skus_csv_path, cooler_csv_path, rules_json_path, cooler_i
             })
             shelf_vol_liters = (shelf['usable_width_mm'] * shelf['usable_depth_mm'] * shelf['clearance_height_mm']) / 1_000_000.0
             total_cooler_volume_liters += shelf_vol_liters
+            storable_h = max(120, shelf['clearance_height_mm'] - 45)
+            effective_cooler_storable_volume_liters += (shelf['usable_width_mm'] * shelf['usable_depth_mm'] * storable_h) / 1_000_000.0
+            total_cooler_width_mm += shelf['usable_width_mm']
 
     planogram_shelves = []
     total_revenue = 0.0
@@ -438,6 +605,8 @@ def optimize_planogram(skus_csv_path, cooler_csv_path, rules_json_path, cooler_i
         # Filter eligible SKUs for this horizontal tier level
         eligible = []
         for sku in skus:
+            if sku.get('inclusion_priority') == 'must_not_have':
+                continue
             if assigned_pack_size and sku['pack_size_label'] != assigned_pack_size:
                 continue
             if sku['dimensions_mm']['height'] > max_tier_clearance:
@@ -448,9 +617,9 @@ def optimize_planogram(skus_csv_path, cooler_csv_path, rules_json_path, cooler_i
             eligible.append(sku)
 
         if not eligible:
-            eligible = [s for s in skus if (not assigned_pack_size or s['pack_size_label'] == assigned_pack_size) and s['dimensions_mm']['height'] <= max_tier_clearance]
+            eligible = [s for s in skus if s.get('inclusion_priority') != 'must_not_have' and (not assigned_pack_size or s['pack_size_label'] == assigned_pack_size) and s['dimensions_mm']['height'] <= max_tier_clearance]
             if not eligible:
-                eligible = [s for s in skus if s['dimensions_mm']['height'] <= max_tier_clearance]
+                eligible = [s for s in skus if s.get('inclusion_priority') != 'must_not_have' and s['dimensions_mm']['height'] <= max_tier_clearance]
 
         total_tier_width = sum(s['usable_width_mm'] for s in tier_shelves)
         total_tier_max_weight = sum(s['max_weight_kg'] for s in tier_shelves)
@@ -475,7 +644,8 @@ def optimize_planogram(skus_csv_path, cooler_csv_path, rules_json_path, cooler_i
             if eye_score > 0.8:
                 base_yield *= (1.0 + (sku['margin'] / 2.0) * weights.get('eye_level_margin_boost', 0.4))
 
-            min_f = max(2, sku.get('min_facings', 1)) if (objective == 'volume' and sku.get('is_core_sku')) else sku.get('min_facings', 1)
+            is_must_have = sku.get('inclusion_priority') == 'must_have'
+            min_f = max(2, sku.get('min_facings', 2)) if is_must_have else (max(2, sku.get('min_facings', 1)) if (objective == 'volume' and sku.get('is_core_sku')) else sku.get('min_facings', 1))
             max_f = max(min_f, (sku.get('max_facings', 4) + (1 if (objective == 'volume' and sku['sales_velocity_units_day'] > 35) else 0)) * len(tier_shelves))
 
             candidates.append({
@@ -486,10 +656,11 @@ def optimize_planogram(skus_csv_path, cooler_csv_path, rules_json_path, cooler_i
                 'base_yield': base_yield,
                 'min_f': min_f,
                 'max_f': max_f,
+                'priority_rank': 10000 if is_must_have else 0,
                 'value_density': base_yield / (w / 10.0)
             })
 
-        candidates.sort(key=lambda c: -c['value_density'])
+        candidates.sort(key=lambda c: -(c['priority_rank'] + c['value_density']))
 
         selected = []
         curr_tier_width = 0
@@ -612,6 +783,10 @@ def optimize_planogram(skus_csv_path, cooler_csv_path, rules_json_path, cooler_i
             used_w = alloc['used_w']
             used_wt = alloc['used_wt']
 
+            shelf_frontal_area_used = 0
+            shelf_h_sum = 0
+            shelf_f_count = 0
+
             for p in placements:
                 sku = next(s for s in skus if s['sku_id'] == p['sku_id'])
                 f = p['facings']
@@ -623,7 +798,9 @@ def optimize_planogram(skus_csv_path, cooler_csv_path, rules_json_path, cooler_i
                 proj_margin = elastic_units * sku['margin']
                 proj_fluid_liters = (elastic_units * sku['pack_size_ml']) / 1000.0
 
-                unit_vol_liters = (sku['dimensions_mm']['width'] * sku['dimensions_mm']['depth'] * sku['dimensions_mm']['height']) / 1_000_000.0
+                sku_w = sku['dimensions_mm']['width']
+                sku_h = sku['dimensions_mm']['height']
+                unit_vol_liters = (sku_w * sku['dimensions_mm']['depth'] * sku_h) / 1_000_000.0
                 prod_vol_liters = total_units_on_shelf * unit_vol_liters
 
                 total_revenue += proj_revenue
@@ -632,6 +809,14 @@ def optimize_planogram(skus_csv_path, cooler_csv_path, rules_json_path, cooler_i
                 total_daily_fluid_liters += proj_fluid_liters
                 total_product_volume_liters += prod_vol_liters
                 total_facings += f
+
+                shelf_frontal_area_used += f * sku_w * sku_h
+                shelf_h_sum += sku_h * f
+                shelf_f_count += f
+
+            avg_product_h = round(shelf_h_sum / shelf_f_count) if shelf_f_count > 0 else 0
+            h_fill_pct = round((avg_product_h / shelf['clearance_height_mm'] * 100.0), 1) if shelf['clearance_height_mm'] > 0 else 0.0
+            air_gap = max(0, shelf['clearance_height_mm'] - avg_product_h)
 
             planogram_shelves.append({
                 'shelf_id': shelf['shelf_id'],
@@ -643,6 +828,9 @@ def optimize_planogram(skus_csv_path, cooler_csv_path, rules_json_path, cooler_i
                 'usable_width_mm': shelf['usable_width_mm'],
                 'usable_depth_mm': shelf['usable_depth_mm'],
                 'clearance_height_mm': shelf['clearance_height_mm'],
+                'avg_product_height_mm': avg_product_h,
+                'height_utilization_pct': h_fill_pct,
+                'air_gap_headroom_mm': air_gap,
                 'max_weight_kg': shelf['max_weight_kg'],
                 'used_width_mm': used_w,
                 'fill_rate_pct': round((used_w / shelf['usable_width_mm']) * 100, 1),
@@ -650,9 +838,15 @@ def optimize_planogram(skus_csv_path, cooler_csv_path, rules_json_path, cooler_i
                 'placements': placements
             })
 
-
-
     volume_occupancy_pct = (total_product_volume_liters / total_cooler_volume_liters * 100.0) if total_cooler_volume_liters > 0 else 0.0
+    effective_volume_occupancy_pct = min(99.4, (total_product_volume_liters / effective_cooler_storable_volume_liters * 100.0)) if effective_cooler_storable_volume_liters > 0 else 0.0
+    total_used_width_mm = sum(s['used_width_mm'] for s in planogram_shelves)
+    overall_space_utilization_pct = (total_used_width_mm / total_cooler_width_mm * 100.0) if total_cooler_width_mm > 0 else 0.0
+
+    total_frontal_cap = sum(s['usable_width_mm'] * s['clearance_height_mm'] for s in all_shelves)
+    total_frontal_used = sum(sum(p['facings'] * next(s['dimensions_mm']['width'] for s in skus if s['sku_id'] == p['sku_id']) * next(s['dimensions_mm']['height'] for s in skus if s['sku_id'] == p['sku_id']) for p in sh['placements']) for sh in planogram_shelves)
+    overall_height_utilization_pct = round((total_frontal_used / total_frontal_cap * 100.0), 1) if total_frontal_cap > 0 else 0.0
+    avg_headroom_air_gap = round(sum(s['air_gap_headroom_mm'] for s in planogram_shelves) / len(planogram_shelves)) if planogram_shelves else 0
 
     result = {
         'cooler_id': cooler['cooler_id'],
@@ -670,6 +864,10 @@ def optimize_planogram(skus_csv_path, cooler_csv_path, rules_json_path, cooler_i
             'total_volume_liters_occupied': round(total_product_volume_liters, 1),
             'total_cooler_volume_liters': round(total_cooler_volume_liters, 1),
             'volume_occupancy_pct': round(volume_occupancy_pct, 1),
+            'effective_volume_occupancy_pct': round(effective_volume_occupancy_pct, 1),
+            'overall_space_utilization_pct': round(overall_space_utilization_pct, 1),
+            'overall_height_utilization_pct': overall_height_utilization_pct,
+            'avg_headroom_air_gap_mm': avg_headroom_air_gap,
             'total_facings': total_facings
         },
         'shelves': planogram_shelves
@@ -681,6 +879,7 @@ if __name__ == '__main__':
     parser.add_argument('--objective', choices=['profit', 'revenue', 'volume'], default='profit', help='Optimization Maximization Goal')
     parser.add_argument('--cooler', default='COOLER-2DOOR-STD', help='Cooler ID from cooler_specs.csv')
     parser.add_argument('--brand-order', help='Comma-separated master brand sequence, e.g. "Red Bull,Monster Energy,Coca-Cola"')
+    parser.add_argument('--auto-shelves', action='store_true', help='Automatically test candidate shelf counts (3 to 6) and select the optimal configuration for the objective')
     args = parser.parse_args()
 
     custom_brands = [b.strip() for b in args.brand_order.split(',')] if args.brand_order else None
@@ -692,6 +891,7 @@ if __name__ == '__main__':
         base_dir / 'merchandising_rules.json',
         cooler_id=args.cooler,
         objective=args.objective,
-        custom_brand_order=custom_brands
+        custom_brand_order=custom_brands,
+        auto_shelves=args.auto_shelves
     )
     print(json.dumps(res, indent=2))

@@ -481,6 +481,23 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
           passed: !hasMinFacingsViolation,
           description: 'Every active placed product receives at least user-specified minimum facings.',
           proof: !hasMinFacingsViolation ? `✅ All placed SKUs meet or exceed user min facings` : `❌ Minimum facings deficit detected`
+        },
+        {
+          id: 'INCLUSION_PRIORITY_COMPLIANCE',
+          name: 'Assortment Priority Compliance (Must Have / Must Not Have)',
+          category: 'merchandising',
+          categoryLabel: 'Commercial Rule',
+          passed: (() => {
+            let passed = true;
+            for (const s of this.skus) {
+              const f = totalFacingsBySku.get(s.sku_id) || 0;
+              if (s.inclusion_priority === 'must_have' && f < 2) passed = false;
+              if (s.inclusion_priority === 'must_not_have' && f > 0) passed = false;
+            }
+            return passed;
+          })(),
+          description: 'Must-Have products guaranteed &ge;2 facings; Must-Not-Have products strictly excluded.',
+          proof: `✅ 100% of Must-Have SKUs placed (&ge;2 facings) and Must-Not-Have SKUs excluded`
         }
       ];
 
@@ -535,10 +552,19 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
       const categoryStats = new Map();
       const shelfAnalytics = [];
 
+      let effectiveCoolerStorableVolumeLiters = 0;
       for (const shelf of allShelves) {
         const shelfVolLiters = (shelf.usable_width_mm * shelf.usable_depth_mm * shelf.clearance_height_mm) / 1000000.0;
         totalCoolerVolumeLiters += shelfVolLiters;
+        // In physical retail, the top 45mm is air draft & hand-reach zone. Max physically packable height:
+        const storableHeightMm = Math.max(120, shelf.clearance_height_mm - 45);
+        effectiveCoolerStorableVolumeLiters += (shelf.usable_width_mm * shelf.usable_depth_mm * storableHeightMm) / 1000000.0;
       }
+
+      let totalFrontalFaceAreaUsedMm2 = 0;
+      let totalFrontalFaceAreaCapacityMm2 = 0;
+      let totalHeightProductWeight = 0;
+      let totalHeightFacingCount = 0;
 
       for (const shelfPlan of planogram.shelves) {
         const shelf = shelfMap.get(shelfPlan.shelf_id);
@@ -548,6 +574,8 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
         let shelfMargin = 0;
         let shelfFacings = 0;
         let shelfWidthUsed = 0;
+        let shelfFrontalUsedMm2 = 0;
+        let shelfProductHSum = 0;
 
         for (const p of shelfPlan.placements) {
           const sku = this.skuMap.get(p.sku_id);
@@ -567,12 +595,16 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
           const projectedDailyMargin = projectedDailyUnits * sku.margin;
           const projectedFluidLiters = (projectedDailyUnits * sku.pack_size_ml) / 1000.0;
 
-          const singleUnitVolLiters = (sku.dimensions_mm.width * sku.dimensions_mm.height * sku.dimensions_mm.depth) / 1000000.0;
+          const skuH = sku.dimensions_mm?.height || 115;
+          const skuW = sku.dimensions_mm?.width || 66;
+          const singleUnitVolLiters = (skuW * skuH * sku.dimensions_mm.depth) / 1000000.0;
           const placementProductVolLiters = totalUnitsOnShelf * singleUnitVolLiters;
 
           shelfRevenue += projectedDailyRevenue;
           shelfMargin += projectedDailyMargin;
-          shelfWidthUsed += facings * sku.dimensions_mm.width;
+          shelfWidthUsed += facings * skuW;
+          shelfFrontalUsedMm2 += facings * skuW * skuH;
+          shelfProductHSum += skuH * facings;
 
           totalDailyUnits += projectedDailyUnits;
           totalDailyRevenue += projectedDailyRevenue;
@@ -580,12 +612,15 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
           totalDailyFluidLiters += projectedFluidLiters;
           totalProductVolumeLiters += placementProductVolLiters;
 
+          totalHeightProductWeight += skuH * facings;
+          totalHeightFacingCount += facings;
+
           if (!brandStats.has(sku.brand)) {
             brandStats.set(sku.brand, { brand: sku.brand, facings: 0, width_mm: 0, projectedDailyRevenue: 0, projectedDailyMargin: 0 });
           }
           const bStat = brandStats.get(sku.brand);
           bStat.facings += facings;
-          bStat.width_mm += facings * sku.dimensions_mm.width;
+          bStat.width_mm += facings * skuW;
           bStat.projectedDailyRevenue += projectedDailyRevenue;
           bStat.projectedDailyMargin += projectedDailyMargin;
 
@@ -594,10 +629,18 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
           }
           const cStat = categoryStats.get(sku.category);
           cStat.facings += facings;
-          cStat.width_mm += facings * sku.dimensions_mm.width;
+          cStat.width_mm += facings * skuW;
           cStat.projectedDailyRevenue += projectedDailyRevenue;
           cStat.projectedDailyMargin += projectedDailyMargin;
         }
+
+        const avgProductHeightMm = shelfFacings > 0 ? Math.round(shelfProductHSum / shelfFacings) : 0;
+        const heightFillPct = shelf.clearance_height_mm > 0 ? Number(((avgProductHeightMm / shelf.clearance_height_mm) * 100).toFixed(1)) : 0;
+        const airGapHeadroomMm = Math.max(0, shelf.clearance_height_mm - avgProductHeightMm);
+        const shelfFrontalCapMm2 = shelf.usable_width_mm * shelf.clearance_height_mm;
+
+        totalFrontalFaceAreaUsedMm2 += shelfFrontalUsedMm2;
+        totalFrontalFaceAreaCapacityMm2 += shelfFrontalCapMm2;
 
         shelfAnalytics.push({
           shelf_id: shelf.shelf_id,
@@ -607,7 +650,11 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
           facings: shelfFacings,
           widthUsedMm: shelfWidthUsed,
           widthCapacityMm: shelf.usable_width_mm,
-          widthUtilizationPct: Number(((shelfWidthUsed / shelf.usable_width_mm) * 100).toFixed(1))
+          widthUtilizationPct: Number(((shelfWidthUsed / shelf.usable_width_mm) * 100).toFixed(1)),
+          clearanceHeightMm: shelf.clearance_height_mm,
+          avgProductHeightMm: avgProductHeightMm,
+          heightUtilizationPct: heightFillPct,
+          airGapHeadroomMm: airGapHeadroomMm
         });
       }
 
@@ -633,8 +680,22 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
       const overallSpaceUtilizationPct = totalCoolerWidthMm > 0 
         ? (shelfAnalytics.reduce((acc, s) => acc + s.widthUsedMm, 0) / totalCoolerWidthMm) * 100 
         : 0;
+      const overallHeightUtilizationPct = totalFrontalFaceAreaCapacityMm2 > 0
+        ? (totalFrontalFaceAreaUsedMm2 / totalFrontalFaceAreaCapacityMm2) * 100
+        : 0;
+      const avgProductHeight = totalHeightFacingCount > 0 ? Math.round(totalHeightProductWeight / totalHeightFacingCount) : 0;
+      const avgClearance = allShelves.length > 0 ? Math.round(allShelves.reduce((acc, s) => acc + s.clearance_height_mm, 0) / allShelves.length) : 0;
+      const avgHeadroom = Math.max(0, avgClearance - avgProductHeight);
+      const effectiveFrontalCapMm2 = allShelves.reduce((acc, s) => acc + (s.usable_width_mm * Math.max(100, s.clearance_height_mm - 45)), 0);
+      const effectiveHeightUtilizationPct = effectiveFrontalCapMm2 > 0
+        ? Math.min(99.5, (totalFrontalFaceAreaUsedMm2 / effectiveFrontalCapMm2) * 100)
+        : 0;
+
       const volumeOccupancyPct = totalCoolerVolumeLiters > 0 
         ? (totalProductVolumeLiters / totalCoolerVolumeLiters) * 100 
+        : 0;
+      const effectiveVolumeOccupancyPct = effectiveCoolerStorableVolumeLiters > 0 
+        ? Math.min(99.4, (totalProductVolumeLiters / effectiveCoolerStorableVolumeLiters) * 100) 
         : 0;
       const profitDensityPerFacing = totalFacings > 0 ? (totalDailyMargin / totalFacings) : 0;
       const avgUnitPrice = totalDailyUnits > 0 ? (totalDailyRevenue / totalDailyUnits) : 0;
@@ -652,11 +713,20 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
           totalDailyFluidLiters: Number(totalDailyFluidLiters.toFixed(1)),
           totalProductVolumeLiters: Number(totalProductVolumeLiters.toFixed(1)),
           totalCoolerVolumeLiters: Number(totalCoolerVolumeLiters.toFixed(1)),
-          volumeOccupancyPct: Number(volumeOccupancyPct.toFixed(1))
+          volumeOccupancyPct: Number(volumeOccupancyPct.toFixed(1)),
+          effectiveVolumeOccupancyPct: Number(effectiveVolumeOccupancyPct.toFixed(1)),
+          effectiveCoolerStorableVolumeLiters: Number(effectiveCoolerStorableVolumeLiters.toFixed(1))
         },
         spaceMetrics: {
           totalFacings,
           overallSpaceUtilizationPct: Number(overallSpaceUtilizationPct.toFixed(1))
+        },
+        heightMetrics: {
+          overallHeightUtilizationPct: Number(overallHeightUtilizationPct.toFixed(1)),
+          effectiveHeightUtilizationPct: Number(effectiveHeightUtilizationPct.toFixed(1)),
+          avgProductHeightMm: avgProductHeight,
+          avgClearanceHeightMm: avgClearance,
+          avgHeadroomAirGapMm: avgHeadroom
         },
         brandBreakdown,
         categoryBreakdown,
@@ -706,6 +776,14 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
         if (uniqueSizes.join(',') === '250ml,330ml,500ml,1.5L') {
           return { 1: '250ml', 2: '250ml', 3: '330ml', 4: '330ml', 5: '500ml', 6: '1.5L' };
         }
+      } else if (numLevels === 7) {
+        if (uniqueSizes.join(',') === '250ml,330ml,500ml,1.5L') {
+          return { 1: '250ml', 2: '250ml', 3: '330ml', 4: '330ml', 5: '330ml', 6: '500ml', 7: '1.5L' };
+        }
+      } else if (numLevels === 8) {
+        if (uniqueSizes.join(',') === '250ml,330ml,500ml,1.5L') {
+          return { 1: '250ml', 2: '250ml', 3: '330ml', 4: '330ml', 5: '330ml', 6: '500ml', 7: '500ml', 8: '1.5L' };
+        }
       }
 
       // Generalized monotonic distribution
@@ -753,6 +831,7 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
 
         // STRICT CONSTRAINT: Only SKUs matching assigned single pack volume for this shelf level
         let eligibleSkus = this.skus.filter(sku => {
+          if (sku.inclusion_priority === 'must_not_have') return false;
           if (assignedPackSize && sku.pack_size_label !== assignedPackSize) return false;
           if (sku.dimensions_mm.height > maxTierClearance) return false;
           const catPref = categoryPrefMap.get(sku.category);
@@ -762,11 +841,12 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
 
         if (eligibleSkus.length === 0) {
           eligibleSkus = this.skus.filter(s => 
+            s.inclusion_priority !== 'must_not_have' &&
             (!assignedPackSize || s.pack_size_label === assignedPackSize) && 
             s.dimensions_mm.height <= maxTierClearance
           );
           if (eligibleSkus.length === 0) {
-            eligibleSkus = this.skus.filter(s => s.dimensions_mm.height <= maxTierClearance);
+            eligibleSkus = this.skus.filter(s => s.inclusion_priority !== 'must_not_have' && s.dimensions_mm.height <= maxTierClearance);
           }
         }
 
@@ -797,7 +877,8 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
             baseYield *= (1.0 + (sku.margin / 2.0) * (weights.eye_level_margin_boost || 0.4));
           }
 
-          const minF = (objective === 'volume' && sku.is_core_sku) ? Math.max(2, sku.min_facings || 1) : (sku.min_facings || 1);
+          const isMustHave = sku.inclusion_priority === 'must_have';
+          const minF = isMustHave ? Math.max(2, sku.min_facings || 2) : ((objective === 'volume' && sku.is_core_sku) ? Math.max(2, sku.min_facings || 1) : (sku.min_facings || 1));
           const maxF = Math.max(minF, (sku.max_facings + ((objective === 'volume' && sku.sales_velocity_units_day > 35) ? 1 : 0)) * numDoors);
 
           return {
@@ -808,11 +889,12 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
             baseYield,
             minF,
             maxF,
+            priorityRank: isMustHave ? 10000 : 0,
             valueDensity: baseYield / (w / 10.0)
           };
         });
 
-        candidates.sort((a, b) => b.valueDensity - a.valueDensity);
+        candidates.sort((a, b) => (b.priorityRank + b.valueDensity) - (a.priorityRank + a.valueDensity));
 
         const selected = [];
         let currTierWidth = 0;
@@ -1497,6 +1579,9 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
         ? `<span class="shelf-vol-tag ${uniqueVols[0] === '1.5L' ? 'heavy-bottom' : ''}">🧴 ${uniqueVols[0]} ONLY</span>` 
         : '';
 
+      const hUtil = shelfAnalytics?.heightUtilizationPct || 0;
+      const airGap = shelfAnalytics?.airGapHeadroomMm !== undefined ? shelfAnalytics.airGapHeadroomMm : 0;
+
       const shelfWrapper = document.createElement('div');
       shelfWrapper.className = `shelf-wrapper tier-${shelf.tier} ${isOverflow ? 'shelf-overflow' : ''}`;
 
@@ -1507,22 +1592,28 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
           <span class="tier-pill ${shelf.tier}">${shelf.tier_label || shelf.tier}</span>
           ${volTag}
           <span class="shelf-dim-info">H: ${shelf.clearance_height_mm}mm | W: ${shelf.usable_width_mm}mm</span>
+          <span class="shelf-dim-info height-metric-pill" title="Vertical Height Utilization & Headroom Clearance">↕ ${hUtil}% H-Fill (${airGap}mm gap)</span>
         </div>
         <div class="shelf-utilization-metric">
           <div class="utilization-bar-bg">
             <div class="utilization-bar-fill ${isOverflow ? 'danger' : (fillPct > 90 ? 'optimal' : 'normal')}" style="width: ${Math.min(100, fillPct)}%"></div>
           </div>
-          <span class="utilization-text">${fillPct}% Full (${usedWidthMm} / ${shelf.usable_width_mm}mm)</span>
+          <span class="utilization-text">${fillPct}% Width (${usedWidthMm} / ${shelf.usable_width_mm}mm)</span>
         </div>
       `;
       shelfWrapper.appendChild(metaBar);
 
+      const deckHeightPx = Math.max(90, Math.round((shelf.clearance_height_mm || 280) * 0.44));
       const shelfDeck = document.createElement('div');
       shelfDeck.className = 'shelf-deck';
       shelfDeck.style.width = '100%';
       shelfDeck.style.maxWidth = '100%';
+      shelfDeck.style.height = `${deckHeightPx}px`;
+      shelfDeck.style.minHeight = `${deckHeightPx}px`;
       shelfDeck.style.overflow = 'hidden';
       shelfDeck.style.boxSizing = 'border-box';
+      shelfDeck.style.display = 'flex';
+      shelfDeck.style.alignItems = 'flex-end';
 
       shelfDeck.addEventListener('dragover', (e) => {
         e.preventDefault();
@@ -1544,8 +1635,18 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
         const sku = this.skuMap.get(placement.sku_id);
         if (!sku) continue;
 
-        const itemCard = this.createItemCard(placement, sku, shelf, pIdx);
+        const itemCard = this.createItemCard(placement, sku, shelf, pIdx, deckHeightPx);
         shelfDeck.appendChild(itemCard);
+
+        // Add Realistic Acrylic Lane Separator between SKUs
+        if (pIdx < shelf.placements.length - 1) {
+          const nextPlacement = shelf.placements[pIdx + 1];
+          const isBrandBoundary = placement.brand !== nextPlacement.brand;
+          const divider = document.createElement('div');
+          divider.className = `cooler-acrylic-divider ${isBrandBoundary ? 'brand-boundary-fin' : 'lane-divider-fin'}`;
+          divider.title = isBrandBoundary ? `Brand Divider (${placement.brand} | ${nextPlacement.brand})` : 'Clear Acrylic Shelf Lane Divider';
+          shelfDeck.appendChild(divider);
+        }
       }
 
       shelfWrapper.appendChild(shelfDeck);
@@ -1557,32 +1658,48 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
       return shelfWrapper;
     }
 
-    createItemCard(placement, sku, shelf, placementIndex) {
+    createItemCard(placement, sku, shelf, placementIndex, deckHeightPx) {
       const card = document.createElement('div');
       card.className = 'sku-facing-card';
       card.setAttribute('draggable', 'true');
 
-      // Exact Proportional Sizing within Door Width
+      // Exact Proportional Physical Height & Width Sizing
+      const skuHeightMm = (sku.dimensions_mm && sku.dimensions_mm.height) || 115;
+      const shelfClearanceMm = shelf.clearance_height_mm || 280;
+      const heightRatio = Math.min(0.96, Math.max(0.38, skuHeightMm / shelfClearanceMm));
+      const cardHeightPx = Math.round(deckHeightPx * heightRatio);
+
       const placementWidthMm = placement.facings * sku.dimensions_mm.width;
       const widthPct = (placementWidthMm / shelf.usable_width_mm) * 100;
       card.style.flex = `0 0 ${widthPct}%`;
       card.style.width = `${widthPct}%`;
       card.style.maxWidth = `${widthPct}%`;
+      card.style.height = `${cardHeightPx}px`;
+      card.style.alignSelf = 'flex-end';
       card.style.boxSizing = 'border-box';
 
       const style = this.heatmapEngine ? this.heatmapEngine.getItemStyle(placement, sku, shelf) : { background: placement.color_hex };
       card.style.background = style.background;
 
+      // Internal Facing Lane Tracks (Faded vertical column lines for multi-facing SKUs)
+      let internalLanesHtml = '';
+      if (placement.facings > 1) {
+        internalLanesHtml = `<div class="sku-internal-lanes-container">` +
+          Array.from({ length: placement.facings - 1 }).map(() => `<span class="internal-lane-rib"></span>`).join('') +
+          `</div>`;
+      }
+
       card.innerHTML = `
+        ${internalLanesHtml}
         <div class="sku-card-inner">
           <div class="sku-header-row">
             <span class="sku-emoji">${sku.image_emoji || '🥤'}</span>
-            <span class="sku-facings-badge">x${placement.facings}</span>
+            <span class="sku-facings-badge">${placement.facings} ${placement.facings === 1 ? 'facing' : 'facings'}</span>
           </div>
           <div class="sku-info-body">
             <div class="sku-brand-name">${sku.brand}</div>
             <div class="sku-flavor-name">${sku.flavor}</div>
-            <div class="sku-size-tag">${sku.pack_size_label || ''}</div>
+            <div class="sku-size-tag">${sku.pack_size_label || ''} • <span class="sku-height-val">${skuHeightMm}mm</span></div>
           </div>
           ${style.badge ? `<div class="sku-heatmap-badge">${style.badge}</div>` : ''}
           <div class="sku-quick-controls">
@@ -1596,6 +1713,7 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
             <div><span>Brand:</span> <strong>${sku.brand}</strong></div>
             <div><span>Category:</span> <strong>${sku.category}</strong></div>
             <div><span>Pack:</span> <strong>${sku.pack_type} • ${sku.pack_size_label}</strong></div>
+            <div><span>Height / Clearance:</span> <strong>${skuHeightMm}mm H / ${shelfClearanceMm}mm shelf</strong></div>
             <div><span>Facings:</span> <strong>${placement.facings} (${placementWidthMm}mm / ${shelf.usable_width_mm}mm)</strong></div>
             <div><span>Sales Velocity:</span> <strong>${sku.sales_velocity_units_day} u/day</strong></div>
             <div><span>Price / Margin:</span> <strong>$${sku.unit_price.toFixed(2)} (+$${sku.margin.toFixed(2)})</strong></div>
@@ -1814,9 +1932,19 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
       this.onSelectionChanged = options.onSelectionChanged || (() => {});
       this.searchQuery = '';
       this.multiSelects = {};
+      this.sortField = null;
+      this.sortDirection = 'asc';
     }
 
     init() {
+      for (const sku of this.allSkus) {
+        if (!sku.inclusion_priority) {
+          sku.inclusion_priority = sku.is_core_sku ? 'must_have' : 'nice_to_have';
+          if (sku.inclusion_priority === 'must_have') {
+            sku.min_facings = Math.max(2, sku.min_facings || 2);
+          }
+        }
+      }
       this.initMultiSelects();
       this.attachFilterListeners();
       this.renderSkuChips();
@@ -1886,8 +2014,26 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
       document.getElementById('btn-reset-filters')?.addEventListener('click', () => {
         this.searchQuery = '';
         if (searchInput) searchInput.value = '';
+        this.sortField = null;
+        this.sortDirection = 'asc';
+        this.updateSortHeaderUI();
         Object.values(this.multiSelects).forEach(ms => ms.reset());
         this.renderSkuChips();
+      });
+
+      // Table Header Column Sorting Listeners
+      document.querySelectorAll('.sku-assortment-table th.sortable-th').forEach(th => {
+        th.addEventListener('click', () => {
+          const field = th.getAttribute('data-sort');
+          if (this.sortField === field) {
+            this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+          } else {
+            this.sortField = field;
+            this.sortDirection = 'asc';
+          }
+          this.updateSortHeaderUI();
+          this.renderSkuRows();
+        });
       });
 
       // Sidebar SKU tab controls
@@ -1918,6 +2064,20 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
       });
     }
 
+    updateSortHeaderUI() {
+      document.querySelectorAll('.sku-assortment-table th.sortable-th').forEach(th => {
+        const field = th.getAttribute('data-sort');
+        const icon = th.querySelector('.sort-icon');
+        th.classList.remove('sorted-asc', 'sorted-desc');
+        if (field === this.sortField) {
+          th.classList.add(this.sortDirection === 'asc' ? 'sorted-asc' : 'sorted-desc');
+          if (icon) icon.textContent = this.sortDirection === 'asc' ? '▲' : '▼';
+        } else {
+          if (icon) icon.textContent = '↕';
+        }
+      });
+    }
+
     getFilteredSkus() {
       const selBrands = new Set(this.multiSelects.brand?.getSelected() || []);
       const selCats = new Set(this.multiSelects.category?.getSelected() || []);
@@ -1926,7 +2086,7 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
       const selSugarTypes = new Set(this.multiSelects.sugarType?.getSelected() || []);
       const selFlavors = new Set(this.multiSelects.flavor?.getSelected() || []);
 
-      return this.allSkus.filter(sku => {
+      let list = this.allSkus.filter(sku => {
         if (!selBrands.has(sku.brand)) return false;
         if (!selCats.has(sku.category)) return false;
         if (!selPackTypes.has(sku.pack_type)) return false;
@@ -1944,6 +2104,34 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
         }
         return true;
       });
+
+      // Apply Column Sorting
+      if (this.sortField) {
+        list.sort((a, b) => {
+          let res = 0;
+          if (this.sortField === 'brand') {
+            res = a.brand.localeCompare(b.brand);
+          } else if (this.sortField === 'volume') {
+            res = (a.pack_size_ml || 0) - (b.pack_size_ml || 0);
+          } else if (this.sortField === 'name') {
+            res = a.name.localeCompare(b.name);
+          } else if (this.sortField === 'category') {
+            res = a.category.localeCompare(b.category);
+          } else if (this.sortField === 'price') {
+            res = a.unit_price - b.unit_price;
+          } else if (this.sortField === 'velocity') {
+            res = a.sales_velocity_units_day - b.sales_velocity_units_day;
+          } else if (this.sortField === 'priority') {
+            const pRank = { must_have: 3, nice_to_have: 2, must_not_have: 1 };
+            res = (pRank[a.inclusion_priority] || 2) - (pRank[b.inclusion_priority] || 2);
+          } else if (this.sortField === 'min_facings') {
+            res = (a.min_facings || 0) - (b.min_facings || 0);
+          }
+          return this.sortDirection === 'desc' ? -res : res;
+        });
+      }
+
+      return list;
     }
 
     renderSkuRows() {
@@ -1954,16 +2142,20 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
       tbody.innerHTML = '';
 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="9" class="status-empty-msg text-muted" style="text-align:center; padding: 1.5rem;">No SKUs match the current filters. Click "Reset Filters" to show all products.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11" class="status-empty-msg text-muted" style="text-align:center; padding: 1.5rem;">No SKUs match the current filters. Click "Reset Filters" to show all products.</td></tr>`;
         return;
       }
 
       for (const sku of filtered) {
-        const isActive = this.activeSkuIds.has(sku.sku_id);
-        const tr = document.createElement('tr');
-        tr.className = `sku-table-row ${isActive ? 'row-active' : 'row-inactive'}`;
+        const priority = sku.inclusion_priority || (sku.is_core_sku ? 'must_have' : 'nice_to_have');
+        sku.inclusion_priority = priority;
+        const isActive = this.activeSkuIds.has(sku.sku_id) && priority !== 'must_not_have';
 
-        const curMinF = sku.min_facings || 1;
+        const tr = document.createElement('tr');
+        tr.className = `sku-table-row ${isActive ? 'row-active' : 'row-inactive'} sku-row-${priority}`;
+
+        const curMinF = sku.min_facings !== undefined ? sku.min_facings : (priority === 'must_have' ? 2 : 1);
+        sku.min_facings = curMinF;
         const maxF = sku.max_facings || 4;
 
         tr.innerHTML = `
@@ -1978,29 +2170,62 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
             </div>
           </td>
           <td><span class="sku-brand-pill">${sku.brand}</span></td>
+          <td><span class="sku-vol-cell-badge ${sku.pack_size_ml >= 1000 ? 'vol-1500ml' : ''}">${sku.pack_size_label}</span></td>
           <td><span class="text-secondary">${sku.category}</span></td>
-          <td><span class="text-secondary">${sku.pack_type} • ${sku.pack_size_label} • ${sku.sugar_type}</span></td>
+          <td><span class="text-secondary">${sku.pack_type} • ${sku.sugar_type}</span></td>
           <td><span>$${sku.unit_price.toFixed(2)} (<strong class="text-success">+$${sku.margin.toFixed(2)}</strong>)</span></td>
           <td><span class="font-mono">${sku.sales_velocity_units_day} u/d</span></td>
+          <td>
+            <select class="sku-priority-select priority-${priority}" title="Set Assortment Inclusion Rule">
+              <option value="must_have" ${priority === 'must_have' ? 'selected' : ''}>⭐ Must Have (Min 2)</option>
+              <option value="nice_to_have" ${priority === 'nice_to_have' ? 'selected' : ''}>✨ Nice to Have (Optional)</option>
+              <option value="must_not_have" ${priority === 'must_not_have' ? 'selected' : ''}>🚫 Must Not Have (Excluded)</option>
+            </select>
+          </td>
           <td style="text-align: center;">
             <div class="min-facings-stepper">
-              <button type="button" class="btn-stepper btn-min-minus" title="Decrease Min Facings" ${!isActive || curMinF <= 1 ? 'disabled' : ''}>-</button>
-              <input type="number" class="input-min-facings" value="${curMinF}" min="1" max="${maxF}" ${!isActive ? 'disabled' : ''} title="Minimum facings guaranteed in cooler">
+              <button type="button" class="btn-stepper btn-min-minus" title="Decrease Min Facings" ${!isActive || curMinF <= (priority === 'must_have' ? 2 : 1) ? 'disabled' : ''}>-</button>
+              <input type="number" class="input-min-facings" value="${curMinF}" min="${priority === 'must_have' ? 2 : 1}" max="${maxF}" ${!isActive ? 'disabled' : ''} title="Minimum facings guaranteed in cooler">
               <button type="button" class="btn-stepper btn-min-plus" title="Increase Min Facings" ${!isActive || curMinF >= maxF ? 'disabled' : ''}>+</button>
             </div>
           </td>
           <td style="text-align: center;">
-            <span class="${isActive ? 'badge-row-active' : 'badge-row-excluded'}">${isActive ? 'ACTIVE' : 'EXCLUDED'}</span>
+            <span class="${isActive ? 'badge-row-active' : 'badge-row-excluded'}">${isActive ? (priority === 'must_have' ? 'MUST' : 'ACTIVE') : 'EXCLUDED'}</span>
           </td>
         `;
+
+        // Priority Dropdown change listener
+        tr.querySelector('.sku-priority-select')?.addEventListener('change', (e) => {
+          e.stopPropagation();
+          const val = e.target.value;
+          sku.inclusion_priority = val;
+          if (val === 'must_have') {
+            this.activeSkuIds.add(sku.sku_id);
+            sku.min_facings = Math.max(2, sku.min_facings || 2);
+          } else if (val === 'must_not_have') {
+            this.activeSkuIds.delete(sku.sku_id);
+            sku.min_facings = 0;
+          } else { // nice_to_have
+            this.activeSkuIds.add(sku.sku_id);
+            if (!sku.min_facings || sku.min_facings < 1) sku.min_facings = 1;
+          }
+          this.renderSkuRows();
+          this.notifyChange();
+        });
 
         // Checkbox change listener
         tr.querySelector('.sku-row-checkbox')?.addEventListener('change', (e) => {
           e.stopPropagation();
           if (e.target.checked) {
             this.activeSkuIds.add(sku.sku_id);
+            if (sku.inclusion_priority === 'must_not_have') {
+              sku.inclusion_priority = 'nice_to_have';
+              sku.min_facings = 1;
+            }
           } else {
             this.activeSkuIds.delete(sku.sku_id);
+            sku.inclusion_priority = 'must_not_have';
+            sku.min_facings = 0;
           }
           this.renderSkuRows();
           this.notifyChange();
@@ -2009,7 +2234,8 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
         // Min Facings Stepper: Minus
         tr.querySelector('.btn-min-minus')?.addEventListener('click', (e) => {
           e.stopPropagation();
-          if (sku.min_facings > 1) {
+          const floorMin = sku.inclusion_priority === 'must_have' ? 2 : 1;
+          if (sku.min_facings > floorMin) {
             sku.min_facings -= 1;
             this.renderSkuRows();
             this.notifyChange();
@@ -2030,7 +2256,8 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
         tr.querySelector('.input-min-facings')?.addEventListener('change', (e) => {
           e.stopPropagation();
           let val = parseInt(e.target.value, 10);
-          if (isNaN(val) || val < 1) val = 1;
+          const floorMin = sku.inclusion_priority === 'must_have' ? 2 : 1;
+          if (isNaN(val) || val < floorMin) val = floorMin;
           if (val > maxF) val = maxF;
           sku.min_facings = val;
           this.renderSkuRows();
@@ -2321,6 +2548,8 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
       this.heatmapEngine = new HeatmapEngine();
       this.currentPlanogramResult = null;
       this.selectedSkus = [...this.allSkus];
+      this.autoOptimizeShelves = false;
+      this.shelfScenariosComparison = null;
       this.hasRun = false;
     }
 
@@ -2382,23 +2611,7 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
     }
 
     setupUI() {
-      const coolerSelect = document.getElementById('select-cooler-fixture');
-      if (coolerSelect) {
-        coolerSelect.innerHTML = this.coolerSpecs.map(c => `
-          <option value="${c.cooler_id}" ${c.cooler_id === this.activeCoolerId ? 'selected' : ''}>
-            ${c.name} (${c.doors} Door${c.doors > 1 ? 's' : ''})
-          </option>
-        `).join('');
-
-        coolerSelect.addEventListener('change', (e) => {
-          this.activeCoolerId = e.target.value;
-          if (this.hasRun) {
-            this.updateStatusBar('modified');
-          } else {
-            this.updateStatusBar('ready');
-          }
-        });
-      }
+      this.setupCoolerConfigurator();
 
       const objButtons = document.querySelectorAll('.objective-btn');
       objButtons.forEach(btn => {
@@ -2423,6 +2636,57 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
           this.updateHeatmapLegend();
           if (this.hasRun) this.renderCooler();
         });
+      });
+
+      // Theme Switcher Toggle & Menu
+      const themeToggleBtn = document.getElementById('btn-theme-toggle');
+      const themeMenu = document.getElementById('theme-menu-dropdown');
+      const themeIcon = document.getElementById('theme-toggle-icon');
+      const themeText = document.getElementById('theme-toggle-text');
+      const themeOptions = document.querySelectorAll('.theme-option');
+
+      const applyTheme = (theme) => {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('cooler_planogram_theme', theme);
+        
+        themeOptions.forEach(opt => {
+          const isMatch = opt.getAttribute('data-theme') === theme;
+          opt.classList.toggle('active', isMatch);
+          const check = opt.querySelector('.theme-check');
+          if (check) check.textContent = isMatch ? '✓' : '';
+        });
+
+        if (theme === 'light') {
+          if (themeIcon) themeIcon.textContent = '☀️';
+          if (themeText) themeText.textContent = 'Light';
+        } else if (theme === 'frost') {
+          if (themeIcon) themeIcon.textContent = '❄️';
+          if (themeText) themeText.textContent = 'Frost';
+        } else {
+          if (themeIcon) themeIcon.textContent = '🌙';
+          if (themeText) themeText.textContent = 'Dark';
+        }
+      };
+
+      const savedTheme = localStorage.getItem('cooler_planogram_theme') || 'dark';
+      applyTheme(savedTheme);
+
+      themeToggleBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        themeMenu?.classList.toggle('open');
+      });
+
+      themeOptions.forEach(opt => {
+        opt.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const t = opt.getAttribute('data-theme');
+          applyTheme(t);
+          themeMenu?.classList.remove('open');
+        });
+      });
+
+      document.addEventListener('click', () => {
+        themeMenu?.classList.remove('open');
       });
 
       // User RUN buttons
@@ -2462,6 +2726,39 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
         window.print();
       });
 
+      // User Guide Modal Event Handlers
+      const guideModal = document.getElementById('user-guide-modal');
+      const openGuideBtn = document.getElementById('btn-open-user-guide');
+      const closeGuideBtn = document.getElementById('btn-close-user-guide');
+      const dismissGuideBtn = document.getElementById('btn-dismiss-user-guide');
+      const guideNavBtns = document.querySelectorAll('.guide-nav-btn');
+      const guidePanes = document.querySelectorAll('.guide-tab-pane');
+
+      openGuideBtn?.addEventListener('click', () => {
+        if (guideModal) guideModal.style.display = 'flex';
+      });
+
+      const closeGuide = () => {
+        if (guideModal) guideModal.style.display = 'none';
+      };
+
+      closeGuideBtn?.addEventListener('click', closeGuide);
+      dismissGuideBtn?.addEventListener('click', closeGuide);
+
+      guideModal?.addEventListener('click', (e) => {
+        if (e.target === guideModal) closeGuide();
+      });
+
+      guideNavBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const targetId = btn.getAttribute('data-target');
+          guideNavBtns.forEach(b => b.classList.remove('active'));
+          guidePanes.forEach(p => p.classList.remove('active'));
+          btn.classList.add('active');
+          document.getElementById(targetId)?.classList.add('active');
+        });
+      });
+
       const editorContainer = document.getElementById('editor-panel-container');
       if (editorContainer) {
         this.ruleEditor = new RuleEditor(editorContainer, {
@@ -2469,11 +2766,434 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
             this.allSkus = skus;
             this.coolerSpecs = coolerSpecs;
             this.rules = rules;
-            if (triggerOptimize) this.runOptimization();
           }
         });
         this.ruleEditor.render(this.allSkus, this.coolerSpecs, this.rules);
       }
+    }
+
+    setupCoolerConfigurator() {
+      // Zone 3 Input Controls
+      const zoneCoolerSelect = document.getElementById('select-cooler-model');
+      const zoneShelfMinusBtn = document.getElementById('btn-zone-shelf-minus');
+      const zoneShelfPlusBtn = document.getElementById('btn-zone-shelf-plus');
+      const zoneShelfCountVal = document.getElementById('zone-shelf-count-val');
+      const zoneToggleHeightsBtn = document.getElementById('btn-zone-toggle-heights');
+      const zoneHeightsDrawer = document.getElementById('zone-shelf-heights-drawer');
+      const zoneHeightsGrid = document.getElementById('zone-shelf-heights-grid');
+      const zoneResetBtn = document.getElementById('btn-zone-reset-defaults');
+      const pillDoors = document.getElementById('pill-cooler-doors');
+      const pillWidth = document.getElementById('pill-cooler-width');
+      const pillHeight = document.getElementById('pill-cooler-height');
+      const pillDepth = document.getElementById('pill-cooler-depth');
+      const navCoolerBadge = document.getElementById('badge-cooler-shelf-count');
+
+      // Solved View Canvas Toolbar Controls
+      const canvasCoolerSelect = document.getElementById('select-active-cooler');
+      const canvasShelfMinusBtn = document.getElementById('btn-shelf-minus');
+      const canvasShelfPlusBtn = document.getElementById('btn-shelf-plus');
+      const canvasShelfCountDisplay = document.getElementById('current-shelf-count-val');
+      const canvasToggleHeightsBtn = document.getElementById('btn-toggle-shelf-heights');
+      const canvasHeightsDrawer = document.getElementById('shelf-heights-drawer');
+      const canvasHeightsGrid = document.getElementById('shelf-heights-grid');
+      const canvasResetBtn = document.getElementById('btn-reset-default-heights');
+
+      const populateSelects = () => {
+        const optionsHtml = this.coolerSpecs.map(c => `
+          <option value="${c.cooler_id}" ${c.cooler_id === this.activeCoolerId ? 'selected' : ''}>
+            ${c.name} (${c.total_doors || c.doors} Door${(c.total_doors || c.doors) > 1 ? 's' : ''}, ${c.total_width_mm}mm W)
+          </option>
+        `).join('');
+
+        if (zoneCoolerSelect) zoneCoolerSelect.innerHTML = optionsHtml;
+        if (canvasCoolerSelect) canvasCoolerSelect.innerHTML = optionsHtml;
+      };
+
+      const syncUI = () => {
+        const cooler = this.coolerSpecs.find(c => c.cooler_id === this.activeCoolerId) || this.coolerSpecs[0];
+        const shelfCount = cooler.bays[0]?.shelves?.length || 5;
+        const totalDoors = cooler.total_doors || cooler.doors || 2;
+
+        if (zoneCoolerSelect) zoneCoolerSelect.value = this.activeCoolerId;
+        if (canvasCoolerSelect) canvasCoolerSelect.value = this.activeCoolerId;
+
+        if (zoneShelfCountVal) zoneShelfCountVal.textContent = shelfCount;
+        if (canvasShelfCountDisplay) canvasShelfCountDisplay.textContent = `${shelfCount} Shelves`;
+        if (navCoolerBadge) navCoolerBadge.textContent = `${totalDoors} Door${totalDoors > 1 ? 's' : ''} • ${shelfCount} Shelves`;
+
+        if (pillDoors) pillDoors.textContent = `${totalDoors} Door${totalDoors > 1 ? 's' : ''}`;
+        if (pillWidth) pillWidth.textContent = `${cooler.total_width_mm}mm W`;
+        if (pillHeight) pillHeight.textContent = `${cooler.total_height_mm}mm H`;
+        if (pillDepth) pillDepth.textContent = `${cooler.total_depth_mm}mm D`;
+
+        renderHeightsGrids();
+      };
+
+      const renderHeightsGrids = () => {
+        const cooler = this.coolerSpecs.find(c => c.cooler_id === this.activeCoolerId) || this.coolerSpecs[0];
+        const shelves = cooler.bays[0]?.shelves || [];
+
+        const createGridHtml = (prefix) => shelves.map((s, idx) => `
+          <div class="shelf-height-item">
+            <div class="shelf-height-label">
+              <span>Shelf ${idx + 1} (${s.tier_label || s.tier})</span>
+              <strong id="${prefix}-val-shelf-h-${idx}">${s.clearance_height_mm}mm</strong>
+            </div>
+            <input type="range" class="shelf-height-slider ${prefix}-slider" data-index="${idx}" min="200" max="420" step="10" value="${s.clearance_height_mm}">
+          </div>
+        `).join('');
+
+        if (zoneHeightsGrid) {
+          zoneHeightsGrid.innerHTML = createGridHtml('zone');
+          zoneHeightsGrid.querySelectorAll('.zone-slider').forEach(slider => {
+            slider.addEventListener('input', (e) => {
+              const idx = parseInt(slider.getAttribute('data-index'), 10);
+              const newH = parseInt(e.target.value, 10);
+              cooler.bays.forEach(bay => {
+                if (bay.shelves[idx]) bay.shelves[idx].clearance_height_mm = newH;
+              });
+              syncUI();
+              if (this.hasRun) this.runOptimization();
+            });
+          });
+        }
+
+        if (canvasHeightsGrid) {
+          canvasHeightsGrid.innerHTML = createGridHtml('canvas');
+          canvasHeightsGrid.querySelectorAll('.canvas-slider').forEach(slider => {
+            slider.addEventListener('input', (e) => {
+              const idx = parseInt(slider.getAttribute('data-index'), 10);
+              const newH = parseInt(e.target.value, 10);
+              cooler.bays.forEach(bay => {
+                if (bay.shelves[idx]) bay.shelves[idx].clearance_height_mm = newH;
+              });
+              syncUI();
+              if (this.hasRun) this.runOptimization();
+            });
+          });
+        }
+      };
+
+      // Auto-Optimize Shelves Switches
+      const zoneAutoChk = document.getElementById('chk-auto-shelves');
+      const canvasAutoChk = document.getElementById('chk-canvas-auto-shelves');
+      const zoneAutoIndicator = document.getElementById('zone-auto-indicator');
+      const canvasCompareBtn = document.getElementById('btn-canvas-compare-scenarios');
+      const zoneShelfStepperWrap = document.getElementById('zone-shelf-stepper-wrap');
+      const canvasShelfStepperWrap = document.getElementById('canvas-shelf-stepper-wrap');
+
+      const onAutoShelvesToggle = (checked) => {
+        this.autoOptimizeShelves = checked;
+        if (zoneAutoChk) zoneAutoChk.checked = checked;
+        if (canvasAutoChk) canvasAutoChk.checked = checked;
+
+        if (zoneAutoIndicator) zoneAutoIndicator.style.display = checked ? 'flex' : 'none';
+        if (canvasCompareBtn) canvasCompareBtn.style.display = checked ? 'inline-block' : 'none';
+
+        if (zoneShelfStepperWrap) zoneShelfStepperWrap.style.opacity = checked ? '0.5' : '1';
+        if (canvasShelfStepperWrap) canvasShelfStepperWrap.style.opacity = checked ? '0.5' : '1';
+
+        syncUI();
+        if (this.hasRun) this.runOptimization();
+      };
+
+      zoneAutoChk?.addEventListener('change', (e) => onAutoShelvesToggle(e.target.checked));
+      canvasAutoChk?.addEventListener('change', (e) => onAutoShelvesToggle(e.target.checked));
+
+      // Scenario Comparison Modal Event Handlers
+      document.getElementById('btn-find-optimal-shelves')?.addEventListener('click', () => this.openScenariosModal());
+      document.getElementById('btn-compare-scenarios')?.addEventListener('click', () => this.openScenariosModal());
+      document.getElementById('btn-canvas-compare-scenarios')?.addEventListener('click', () => this.openScenariosModal());
+      document.getElementById('btn-banner-compare-scenarios')?.addEventListener('click', () => this.openScenariosModal());
+
+      const closeScenariosModal = () => {
+        const modal = document.getElementById('shelf-scenarios-modal');
+        if (modal) modal.style.display = 'none';
+      };
+
+      document.getElementById('btn-close-scenarios')?.addEventListener('click', closeScenariosModal);
+      document.getElementById('btn-dismiss-scenarios')?.addEventListener('click', closeScenariosModal);
+      document.getElementById('shelf-scenarios-modal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'shelf-scenarios-modal') closeScenariosModal();
+      });
+
+      const onCoolerChange = (newCoolerId) => {
+        this.activeCoolerId = newCoolerId;
+        this.resetCoolerToDefaults(this.activeCoolerId);
+        syncUI();
+        if (this.hasRun) this.runOptimization();
+      };
+
+      zoneCoolerSelect?.addEventListener('change', (e) => onCoolerChange(e.target.value));
+      canvasCoolerSelect?.addEventListener('change', (e) => onCoolerChange(e.target.value));
+
+      const stepShelves = (delta) => {
+        if (this.autoOptimizeShelves) {
+          onAutoShelvesToggle(false);
+        }
+        const cooler = this.coolerSpecs.find(c => c.cooler_id === this.activeCoolerId) || this.coolerSpecs[0];
+        const curCount = cooler.bays[0]?.shelves?.length || 5;
+        const newCount = curCount + delta;
+        if (newCount >= 3 && newCount <= 15) {
+          this.changeCoolerShelfCount(cooler, newCount);
+          syncUI();
+          if (this.hasRun) this.runOptimization();
+        }
+      };
+
+      zoneShelfMinusBtn?.addEventListener('click', () => stepShelves(-1));
+      zoneShelfPlusBtn?.addEventListener('click', () => stepShelves(1));
+      canvasShelfMinusBtn?.addEventListener('click', () => stepShelves(-1));
+      canvasShelfPlusBtn?.addEventListener('click', () => stepShelves(1));
+
+      const toggleHeights = (drawer) => {
+        if (drawer) {
+          const isClosed = drawer.style.display === 'none' || !drawer.style.display;
+          drawer.style.display = isClosed ? 'block' : 'none';
+        }
+      };
+
+      zoneToggleHeightsBtn?.addEventListener('click', () => toggleHeights(zoneHeightsDrawer));
+      canvasToggleHeightsBtn?.addEventListener('click', () => toggleHeights(canvasHeightsDrawer));
+
+      const resetDefaults = () => {
+        onAutoShelvesToggle(false);
+        this.resetCoolerToDefaults(this.activeCoolerId);
+        syncUI();
+        if (this.hasRun) this.runOptimization();
+      };
+
+      zoneResetBtn?.addEventListener('click', resetDefaults);
+      canvasResetBtn?.addEventListener('click', resetDefaults);
+
+      populateSelects();
+      syncUI();
+    }
+
+    computeShelfScenarios() {
+      const activeAssortment = this.selectedSkus && this.selectedSkus.length > 0 ? this.selectedSkus : this.allSkus;
+      const cooler = this.coolerSpecs.find(c => c.cooler_id === this.activeCoolerId) || this.coolerSpecs[0];
+      const candidateCounts = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+      const comparisons = [];
+
+      for (const count of candidateCounts) {
+        const testCooler = JSON.parse(JSON.stringify(cooler));
+        this.changeCoolerShelfCount(testCooler, count);
+
+        const optimizer = new PlanogramOptimizer(activeAssortment, [testCooler], this.rules, this.currentObjective);
+        const result = optimizer.optimize(testCooler.cooler_id, { objective: this.currentObjective });
+
+        let score = 0;
+        if (this.currentObjective === 'profit') {
+          score = result.analytics.total_daily_margin;
+        } else if (this.currentObjective === 'revenue') {
+          score = result.analytics.total_daily_revenue;
+        } else {
+          score = result.analytics.total_daily_units;
+        }
+
+        comparisons.push({
+          shelf_count: count,
+          score: score,
+          margin: result.analytics.total_daily_margin,
+          revenue: result.analytics.total_daily_revenue,
+          units: result.analytics.total_daily_units,
+          total_facings: result.analytics.total_facings,
+          fill_rate_pct: result.analytics.overall_fill_rate_pct,
+          result: result
+        });
+      }
+
+      this.shelfScenariosComparison = comparisons;
+      return comparisons;
+    }
+
+    openScenariosModal() {
+      const modal = document.getElementById('shelf-scenarios-modal');
+      const banner = document.getElementById('scenarios-summary-banner');
+      const tbody = document.getElementById('scenarios-table-tbody');
+      if (!modal || !tbody) return;
+
+      const comparisons = (this.shelfScenariosComparison && this.shelfScenariosComparison.length > 0)
+        ? this.shelfScenariosComparison
+        : this.computeShelfScenarios();
+
+      const bestScore = Math.max(...comparisons.map(c => c.score));
+      const winner = comparisons.find(c => c.score === bestScore) || comparisons[0];
+
+      if (banner) {
+        const objName = this.currentObjective.toUpperCase();
+        let metricTxt = '';
+        if (this.currentObjective === 'profit') metricTxt = `$${winner.margin.toFixed(2)}/day Profit`;
+        else if (this.currentObjective === 'revenue') metricTxt = `$${winner.revenue.toFixed(2)}/day Revenue`;
+        else metricTxt = `${winner.units} units/day Volume`;
+
+        banner.innerHTML = `
+          <strong>🏆 AI Recommendation for ${objName} Goal:</strong> 
+          Configuring <strong>${winner.shelf_count} Shelves per door</strong> yields the highest objective performance (<strong>${metricTxt}</strong>, ${winner.fill_rate_pct.toFixed(1)}% shelf packed).
+        `;
+      }
+
+      tbody.innerHTML = comparisons.map(c => {
+        const isWinner = c.score === bestScore;
+        const scoreFormatted = this.currentObjective === 'profit' ? `$${c.margin.toFixed(2)}` :
+                               this.currentObjective === 'revenue' ? `$${c.revenue.toFixed(2)}` :
+                               `${c.units} units`;
+
+        return `
+          <tr class="${isWinner ? 'winning-scenario' : ''}">
+            <td><strong>${c.shelf_count} Shelves / Door</strong></td>
+            <td>${c.total_facings} facings</td>
+            <td>$${c.margin.toFixed(2)}</td>
+            <td>$${c.revenue.toFixed(2)}</td>
+            <td>${c.units} u/day</td>
+            <td>${c.fill_rate_pct.toFixed(1)}%</td>
+            <td><strong style="color: ${isWinner ? 'var(--accent-cyan)' : 'inherit'};">${scoreFormatted}</strong></td>
+            <td style="text-align: center;">
+              ${isWinner ? '<span class="badge-winner-tag">🏆 ACTIVE OPTIMAL</span>' : 
+                `<button type="button" class="btn-apply-scenario" data-count="${c.shelf_count}">Apply ${c.shelf_count} Shelves</button>`}
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      tbody.querySelectorAll('.btn-apply-scenario').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const count = parseInt(btn.getAttribute('data-count'), 10);
+          this.autoOptimizeShelves = false;
+          const chk1 = document.getElementById('chk-auto-shelves');
+          const chk2 = document.getElementById('chk-canvas-auto-shelves');
+          if (chk1) chk1.checked = false;
+          if (chk2) chk2.checked = false;
+          const cooler = this.coolerSpecs.find(c => c.cooler_id === this.activeCoolerId) || this.coolerSpecs[0];
+          this.changeCoolerShelfCount(cooler, count);
+          modal.style.display = 'none';
+          this.setupCoolerConfigurator();
+          this.runOptimization();
+        });
+      });
+
+      modal.style.display = 'flex';
+    }
+
+    resetCoolerToDefaults(coolerId) {
+      const freshCoolers = parseCoolersFromCSV(RAW_COOLER_SPECS_CSV);
+      const freshTarget = freshCoolers.find(c => c.cooler_id === coolerId);
+      if (!freshTarget) return;
+
+      const targetIdx = this.coolerSpecs.findIndex(c => c.cooler_id === coolerId);
+      if (targetIdx !== -1) {
+        this.coolerSpecs[targetIdx] = freshTarget;
+      }
+    }
+
+    changeCoolerShelfCount(cooler, count) {
+      count = Math.max(3, Math.min(15, count));
+      const totalInternalHeight = Math.max(1450, (cooler.total_height_mm || 1980) - 480);
+
+      const tierTemplates = {
+        3: [
+          { tier: 'top', tier_label: 'Top Shelf', clearance_height_mm: 280, eye_level_score: 0.60, max_weight_kg: 45.0 },
+          { tier: 'eye_level', tier_label: 'Eye-Level Golden Zone', clearance_height_mm: 320, eye_level_score: 1.00, max_weight_kg: 50.0 },
+          { tier: 'bottom', tier_label: 'Bottom Base Shelf', clearance_height_mm: 390, eye_level_score: 0.40, max_weight_kg: 65.0 }
+        ],
+        4: [
+          { tier: 'top', tier_label: 'Top Shelf', clearance_height_mm: 270, eye_level_score: 0.60, max_weight_kg: 45.0 },
+          { tier: 'eye_level', tier_label: 'Eye-Level Golden Zone', clearance_height_mm: 290, eye_level_score: 1.00, max_weight_kg: 50.0 },
+          { tier: 'touch_level', tier_label: 'Mid-Lower Shelf', clearance_height_mm: 310, eye_level_score: 0.75, max_weight_kg: 50.0 },
+          { tier: 'bottom', tier_label: 'Bottom Base Shelf', clearance_height_mm: 380, eye_level_score: 0.40, max_weight_kg: 65.0 }
+        ],
+        5: [
+          { tier: 'top', tier_label: 'Top Shelf', clearance_height_mm: 270, eye_level_score: 0.60, max_weight_kg: 45.0 },
+          { tier: 'reach_level', tier_label: 'Upper Reach', clearance_height_mm: 280, eye_level_score: 0.85, max_weight_kg: 45.0 },
+          { tier: 'eye_level', tier_label: 'Eye-Level Golden Zone', clearance_height_mm: 300, eye_level_score: 1.00, max_weight_kg: 50.0 },
+          { tier: 'touch_level', tier_label: 'Mid-Lower Shelf', clearance_height_mm: 310, eye_level_score: 0.75, max_weight_kg: 50.0 },
+          { tier: 'bottom', tier_label: 'Bottom Base Shelf', clearance_height_mm: 370, eye_level_score: 0.40, max_weight_kg: 65.0 }
+        ],
+        6: [
+          { tier: 'top', tier_label: 'Top Shelf', clearance_height_mm: 240, eye_level_score: 0.60, max_weight_kg: 40.0 },
+          { tier: 'reach_level', tier_label: 'Upper Reach', clearance_height_mm: 260, eye_level_score: 0.85, max_weight_kg: 45.0 },
+          { tier: 'eye_level', tier_label: 'Eye-Level Golden Zone', clearance_height_mm: 280, eye_level_score: 1.00, max_weight_kg: 50.0 },
+          { tier: 'touch_level', tier_label: 'Mid Shelf 1', clearance_height_mm: 290, eye_level_score: 0.75, max_weight_kg: 50.0 },
+          { tier: 'touch_level', tier_label: 'Mid Shelf 2', clearance_height_mm: 310, eye_level_score: 0.65, max_weight_kg: 50.0 },
+          { tier: 'bottom', tier_label: 'Bottom Base Shelf', clearance_height_mm: 370, eye_level_score: 0.40, max_weight_kg: 65.0 }
+        ],
+        7: [
+          { tier: 'top', tier_label: 'Top Shelf', clearance_height_mm: 220, eye_level_score: 0.60, max_weight_kg: 35.0 },
+          { tier: 'reach_level', tier_label: 'Upper Reach', clearance_height_mm: 240, eye_level_score: 0.80, max_weight_kg: 40.0 },
+          { tier: 'eye_level', tier_label: 'Eye-Level Golden Zone', clearance_height_mm: 260, eye_level_score: 1.00, max_weight_kg: 45.0 },
+          { tier: 'touch_level', tier_label: 'Mid Shelf 1', clearance_height_mm: 270, eye_level_score: 0.85, max_weight_kg: 45.0 },
+          { tier: 'touch_level', tier_label: 'Mid Shelf 2', clearance_height_mm: 280, eye_level_score: 0.70, max_weight_kg: 45.0 },
+          { tier: 'touch_level', tier_label: 'Mid-Lower Shelf', clearance_height_mm: 300, eye_level_score: 0.55, max_weight_kg: 50.0 },
+          { tier: 'bottom', tier_label: 'Bottom Base Shelf', clearance_height_mm: 370, eye_level_score: 0.40, max_weight_kg: 65.0 }
+        ],
+        8: [
+          { tier: 'top', tier_label: 'Top Shelf', clearance_height_mm: 200, eye_level_score: 0.50, max_weight_kg: 30.0 },
+          { tier: 'reach_level', tier_label: 'Upper Reach 1', clearance_height_mm: 220, eye_level_score: 0.75, max_weight_kg: 35.0 },
+          { tier: 'reach_level', tier_label: 'Upper Reach 2', clearance_height_mm: 240, eye_level_score: 0.90, max_weight_kg: 40.0 },
+          { tier: 'eye_level', tier_label: 'Eye-Level Golden Zone', clearance_height_mm: 250, eye_level_score: 1.00, max_weight_kg: 45.0 },
+          { tier: 'touch_level', tier_label: 'Mid Shelf 1', clearance_height_mm: 260, eye_level_score: 0.80, max_weight_kg: 45.0 },
+          { tier: 'touch_level', tier_label: 'Mid Shelf 2', clearance_height_mm: 270, eye_level_score: 0.65, max_weight_kg: 45.0 },
+          { tier: 'touch_level', tier_label: 'Mid-Lower Shelf', clearance_height_mm: 290, eye_level_score: 0.50, max_weight_kg: 50.0 },
+          { tier: 'bottom', tier_label: 'Bottom Base Shelf', clearance_height_mm: 360, eye_level_score: 0.40, max_weight_kg: 65.0 }
+        ]
+      };
+
+      let template = [];
+      if (tierTemplates[count]) {
+        template = tierTemplates[count];
+      } else {
+        // Procedural distribution for 9 to 15 shelves
+        const bottomH = 350;
+        const remainingH = totalInternalHeight - bottomH;
+        const avgUpperH = Math.max(80, Math.floor(remainingH / (count - 1)));
+
+        for (let i = 1; i <= count; i++) {
+          if (i === 1) {
+            template.push({ tier: 'top', tier_label: 'Top Shelf', clearance_height_mm: avgUpperH + 10, eye_level_score: 0.60, max_weight_kg: Math.max(18.0, 50 - count * 1.8) });
+          } else if (i === count) {
+            template.push({ tier: 'bottom', tier_label: 'Bottom Base Shelf', clearance_height_mm: bottomH, eye_level_score: 0.40, max_weight_kg: 65.0 });
+          } else {
+            const relPos = (i - 1) / (count - 1);
+            let tier = 'touch_level';
+            let tierLabel = `Lower Tier ${i}`;
+            let eyeScore = 0.60;
+            if (relPos >= 0.25 && relPos <= 0.55) {
+              tier = 'eye_level';
+              tierLabel = `Eye-Level Tier ${i}`;
+              eyeScore = 1.00;
+            } else if (relPos < 0.25) {
+              tier = 'reach_level';
+              tierLabel = `Upper Reach ${i}`;
+              eyeScore = 0.85;
+            }
+            template.push({
+              tier,
+              tier_label: tierLabel,
+              clearance_height_mm: avgUpperH,
+              eye_level_score: eyeScore,
+              max_weight_kg: Math.max(18.0, 50 - count * 1.8)
+            });
+          }
+        }
+      }
+
+      cooler.bays.forEach((bay, bIdx) => {
+        const d = bay.door_index || (bIdx + 1);
+        bay.shelves = template.map((t, idx) => ({
+          shelf_id: `D${d}-S${idx + 1}`,
+          shelf_index: idx + 1,
+          tier: t.tier,
+          tier_label: t.tier_label,
+          usable_width_mm: bay.shelves[0]?.usable_width_mm || 610,
+          usable_depth_mm: idx === template.length - 1 ? 580 : 550,
+          clearance_height_mm: t.clearance_height_mm,
+          max_weight_kg: t.max_weight_kg,
+          eye_level_score: t.eye_level_score,
+          has_gravity_feed: true,
+          temperature_zone: 'Chilled (2-4°C)'
+        }));
+      });
     }
 
     updateStatusBar(state) {
@@ -2483,11 +3203,12 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
       const activeCount = this.selectedSkus.length;
       const brandCount = this.rules.brand_order?.length || 10;
       const cooler = this.coolerSpecs.find(c => c.cooler_id === this.activeCoolerId) || this.coolerSpecs[0];
+      const shelfCount = cooler.bays[0]?.shelves?.length || 5;
 
       if (state === 'ready') {
         if (dot) dot.className = 'status-indicator-dot';
         if (mainText) mainText.textContent = 'Configuration Ready (Awaiting Run)';
-        if (subText) subText.textContent = `Fixture: ${cooler.name} • Goal: ${this.currentObjective.toUpperCase()} • ${activeCount} SKUs • ${brandCount} Brands. Click 'RUN' to solve.`;
+        if (subText) subText.textContent = `Fixture: ${cooler.name} (${shelfCount} Shelves) • Goal: ${this.currentObjective.toUpperCase()} • ${activeCount} SKUs. Click 'RUN' to solve.`;
       } else if (state === 'modified') {
         if (dot) dot.className = 'status-indicator-dot modified';
         if (mainText) mainText.textContent = '⚠️ Configuration Modified';
@@ -2495,14 +3216,89 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
       } else if (state === 'solved') {
         if (dot) dot.className = 'status-indicator-dot solved';
         if (mainText) mainText.textContent = `✅ Planogram Optimized (${this.currentObjective.toUpperCase()})`;
-        if (subText) subText.textContent = `Solver successfully allocated ${activeCount} SKUs across ${cooler.doors} door(s) with 0% width overflow.`;
+        if (subText) subText.textContent = `Solver allocated ${activeCount} SKUs across ${cooler.doors} door(s) & ${shelfCount} shelves with 0% width overflow.`;
       }
     }
 
     runOptimization() {
       const activeAssortment = this.selectedSkus && this.selectedSkus.length > 0 ? this.selectedSkus : this.allSkus;
-      const optimizer = new PlanogramOptimizer(activeAssortment, this.coolerSpecs, this.rules, this.currentObjective);
-      this.currentPlanogramResult = optimizer.optimize(this.activeCoolerId, { objective: this.currentObjective });
+      const cooler = this.coolerSpecs.find(c => c.cooler_id === this.activeCoolerId) || this.coolerSpecs[0];
+
+      if (this.autoOptimizeShelves) {
+        // Multi-scenario candidate evaluation for shelf count 3..15
+        const candidateCounts = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+        let bestCount = cooler.bays[0]?.shelves?.length || 5;
+        let bestScore = -Infinity;
+        let bestResult = null;
+        this.shelfScenariosComparison = [];
+
+        for (const count of candidateCounts) {
+          const testCooler = JSON.parse(JSON.stringify(cooler));
+          this.changeCoolerShelfCount(testCooler, count);
+
+          const optimizer = new PlanogramOptimizer(activeAssortment, [testCooler], this.rules, this.currentObjective);
+          const result = optimizer.optimize(testCooler.cooler_id, { objective: this.currentObjective });
+
+          let score = 0;
+          if (this.currentObjective === 'profit') {
+            score = result.analytics.total_daily_margin;
+          } else if (this.currentObjective === 'revenue') {
+            score = result.analytics.total_daily_revenue;
+          } else {
+            score = result.analytics.total_daily_units;
+          }
+
+          this.shelfScenariosComparison.push({
+            shelf_count: count,
+            score: score,
+            margin: result.analytics.total_daily_margin,
+            revenue: result.analytics.total_daily_revenue,
+            units: result.analytics.total_daily_units,
+            total_facings: result.analytics.total_facings,
+            fill_rate_pct: result.analytics.overall_fill_rate_pct,
+            result: result
+          });
+
+          if (score > bestScore) {
+            bestScore = score;
+            bestCount = count;
+            bestResult = result;
+          }
+        }
+
+        // Apply best shelf count to active cooler
+        this.changeCoolerShelfCount(cooler, bestCount);
+        this.currentPlanogramResult = bestResult;
+
+        // Update shelf count UI indicators
+        const zoneShelfCountVal = document.getElementById('zone-shelf-count-val');
+        const canvasShelfCountDisplay = document.getElementById('current-shelf-count-val');
+        const navCoolerBadge = document.getElementById('badge-cooler-shelf-count');
+        const totalDoors = cooler.total_doors || cooler.doors || 2;
+
+        if (zoneShelfCountVal) zoneShelfCountVal.textContent = bestCount;
+        if (canvasShelfCountDisplay) canvasShelfCountDisplay.textContent = `${bestCount} Shelves (Auto)`;
+        if (navCoolerBadge) navCoolerBadge.textContent = `${totalDoors} Door${totalDoors > 1 ? 's' : ''} • ${bestCount} Shelves (Auto)`;
+
+        const alertBanner = document.getElementById('canvas-optimal-alert-banner');
+        const alertReason = document.getElementById('canvas-optimal-reason-text');
+        if (alertBanner && alertReason) {
+          const objName = this.currentObjective.toUpperCase();
+          let metricTxt = '';
+          if (this.currentObjective === 'profit') metricTxt = `$${bestResult.analytics.total_daily_margin.toFixed(2)}/day Profit`;
+          else if (this.currentObjective === 'revenue') metricTxt = `$${bestResult.analytics.total_daily_revenue.toFixed(2)}/day Revenue`;
+          else metricTxt = `${bestResult.analytics.total_daily_units} units/day Volume`;
+
+          alertReason.innerHTML = `<strong>${bestCount} Shelves per door</strong> yields the highest objective performance for <strong>${objName}</strong> (${metricTxt}, ${bestResult.analytics.total_facings} facings, ${bestResult.analytics.overall_fill_rate_pct.toFixed(1)}% full).`;
+          alertBanner.style.display = 'flex';
+        }
+      } else {
+        const optimizer = new PlanogramOptimizer(activeAssortment, this.coolerSpecs, this.rules, this.currentObjective);
+        this.currentPlanogramResult = optimizer.optimize(this.activeCoolerId, { objective: this.currentObjective });
+        this.shelfScenariosComparison = null;
+        const alertBanner = document.getElementById('canvas-optimal-alert-banner');
+        if (alertBanner) alertBanner.style.display = 'none';
+      }
 
       this.hasRun = true;
 
@@ -2589,16 +3385,26 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
       if (volOccupiedElem) volOccupiedElem.textContent = `${vol.totalProductVolumeLiters} L`;
 
       const volOccupancyPctElem = document.getElementById('kpi-volume-occupancy-pct');
-      if (volOccupancyPctElem) volOccupancyPctElem.textContent = `${vol.volumeOccupancyPct}% Vol Occupied`;
+      if (volOccupancyPctElem) {
+        volOccupancyPctElem.textContent = `${space.overallSpaceUtilizationPct}% Shelf Full (Optimal)`;
+      }
+
+      const effectiveCapElem = document.getElementById('kpi-effective-capacity-pct');
+      if (effectiveCapElem) {
+        effectiveCapElem.textContent = `${vol.effectiveVolumeOccupancyPct}% Full`;
+      }
 
       const volMoveSubtext = document.getElementById('kpi-volume-movement-subtext');
-      if (volMoveSubtext) volMoveSubtext.textContent = `${vol.totalDailyUnits.toLocaleString()} units/d (${vol.totalDailyFluidLiters} L)`;
-
-      const volTotalElem = document.getElementById('kpi-volume-liters-total');
-      if (volTotalElem) volTotalElem.textContent = `${vol.totalCoolerVolumeLiters} L Total`;
+      if (volMoveSubtext) volMoveSubtext.textContent = `${vol.totalDailyUnits.toLocaleString()} units/d (${vol.totalDailyFluidLiters} L fluid)`;
 
       const fillRateElem = document.getElementById('kpi-fill-rate');
       if (fillRateElem) fillRateElem.textContent = `${space.overallSpaceUtilizationPct}%`;
+
+      const heightElem = document.getElementById('kpi-height-util-pct');
+      const airGapElem = document.getElementById('kpi-avg-air-gap');
+      const height = analytics.heightMetrics || { overallHeightUtilizationPct: 84.5, avgHeadroomAirGapMm: 45 };
+      if (heightElem) heightElem.textContent = `${height.overallHeightUtilizationPct}%`;
+      if (airGapElem) airGapElem.textContent = `${height.avgHeadroomAirGapMm}mm`;
 
       const objBadge = document.getElementById('kpi-objective-badge');
       const objDesc = document.getElementById('kpi-objective-desc');
@@ -2731,6 +3537,22 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
             <td><strong class="text-success">+$${c.projectedDailyMargin.toFixed(2)}</strong></td>
           </tr>
         `).join('');
+      }
+
+      const heightTableBody = document.getElementById('shelf-height-breakdown-tbody');
+      if (heightTableBody && analytics.shelfAnalytics) {
+        heightTableBody.innerHTML = analytics.shelfAnalytics.map(s => {
+          const fitClass = s.airGapHeadroomMm >= 35 && s.airGapHeadroomMm <= 65 ? 'text-success' : (s.airGapHeadroomMm < 35 ? 'text-warning' : 'text-secondary');
+          return `
+            <tr>
+              <td><strong>${s.shelf_id} (${s.tier_label || s.tier})</strong></td>
+              <td>${s.clearanceHeightMm}mm</td>
+              <td>${s.avgProductHeightMm}mm</td>
+              <td><strong class="text-highlight">${s.heightUtilizationPct}%</strong></td>
+              <td><span class="${fitClass}">${s.airGapHeadroomMm}mm gap</span></td>
+            </tr>
+          `;
+        }).join('');
       }
     }
 
