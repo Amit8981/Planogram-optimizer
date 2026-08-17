@@ -1,0 +1,23 @@
+sku_id,name,brand,sub_brand,category,sub_category,flavor,sugar_type,pack_type,pack_material,pack_size_ml,pack_size_label,width_mm,height_mm,depth_mm,weight_g,unit_cost,unit_price,margin,sales_velocity_units_day,min_facings,max_facings,case_pack_units,is_core_sku,color_hex,image_emoji
+CC-ORIG-330,Coca-Cola Original 330ml Can,Coca-Cola,Classic,Carbonated Soft Drinks,Cola,Original,Regular,Can,Aluminium,330,330ml,66,115,66,355,0.45,1.50,1.05,48.0,2,5,24,TRUE,#E61B23,🥤
+CC-ZERO-330,Coca-Cola Zero Sugar 330ml Can,Coca-Cola,Zero Sugar,Carbonated Soft Drinks,Cola,Zero Sugar,Zero Sugar,Can,Aluminium,330,330ml,66,115,66,340,0.45,1.50,1.05,38.5,2,4,24,TRUE,#1E1E1E,🥤
+CC-DIET-330,Diet Coke 330ml Can,Coca-Cola,Diet,Carbonated Soft Drinks,Cola,Diet,Diet,Can,Aluminium,330,330ml,66,115,66,340,0.45,1.50,1.05,26.0,1,3,24,TRUE,#A0A0A0,🥤
+CC-CHRY-330,Coca-Cola Cherry 330ml Can,Coca-Cola,Flavors,Carbonated Soft Drinks,Cola,Cherry,Regular,Can,Aluminium,330,330ml,66,115,66,355,0.48,1.60,1.12,14.5,1,2,24,FALSE,#7E0D25,🍒
+SP-ORIG-330,Sprite Lemon-Lime 330ml Can,Sprite,Classic,Carbonated Soft Drinks,Lemon-Lime,Original,Regular,Can,Aluminium,330,330ml,66,115,66,350,0.42,1.45,1.03,29.0,1,3,24,TRUE,#008B45,🍋
+SP-ZERO-330,Sprite Zero Sugar 330ml Can,Sprite,Zero Sugar,Carbonated Soft Drinks,Lemon-Lime,Zero Sugar,Zero Sugar,Can,Aluminium,330,330ml,66,115,66,338,0.42,1.45,1.03,18.0,1,2,24,FALSE,#2E8B57,🍋
+FA-ORNG-330,Fanta Orange 330ml Can,Fanta,Classic,Carbonated Soft Drinks,Fruit Soda,Citrus,Regular,Can,Aluminium,330,330ml,66,115,66,355,0.40,1.40,1.00,24.5,1,3,24,TRUE,#FF7900,🍊
+FA-GRPE-330,Fanta Grape 330ml Can,Fanta,Flavors,Carbonated Soft Drinks,Fruit Soda,Berry,Regular,Can,Aluminium,330,330ml,66,115,66,355,0.40,1.40,1.00,12.0,1,2,24,FALSE,#663399,🍇
+PEP-ORIG-330,Pepsi Max 330ml Can,Pepsi,Max,Carbonated Soft Drinks,Cola,Zero Sugar,Zero Sugar,Can,Aluminium,330,330ml,66,115,66,340,0.40,1.40,1.00,31.0,1,4,24,TRUE,#004B93,🥤
+PEP-TWST-330,Pepsi Twist Lemon 330ml Can,Pepsi,Twist,Carbonated Soft Drinks,Cola,Citrus,Regular,Can,Aluminium,330,330ml,66,115,66,345,0.42,1.45,1.03,11.5,1,2,24,FALSE,#002F6C,🍋
+RB-ORIG-250,Red Bull Energy Drink 250ml Slim Can,Red Bull,Classic,Energy Drinks,Functional Energy,Original,Regular,Slim Can,Aluminium,250,250ml,53,134,53,270,0.95,2.65,1.70,44.0,2,5,24,TRUE,#1C355E,⚡
+RB-SUGR-250,Red Bull Sugarfree 250ml Slim Can,Red Bull,Sugarfree,Energy Drinks,Functional Energy,Zero Sugar,Zero Sugar,Slim Can,Aluminium,250,250ml,53,134,53,260,0.95,2.65,1.70,27.5,1,3,24,TRUE,#6C8CBF,⚡
+RB-YLLW-250,Red Bull Tropical Edition 250ml Slim Can,Red Bull,Editions,Energy Drinks,Functional Energy,Tropical,Regular,Slim Can,Aluminium,250,250ml,53,134,53,270,0.98,2.75,1.77,16.0,1,2,24,FALSE,#D4AF37,🍍
+MN-ORIG-500,Monster Energy Original 500ml Mega Can,Monster Energy,Classic,Energy Drinks,High Performance,Original,Regular,Mega Can,Aluminium,500,500ml,66,168,66,540,0.85,2.50,1.65,36.0,2,4,12,TRUE,#101010,🔋
+MN-ULTR-500,Monster Energy Ultra White 500ml Mega Can,Monster Energy,Ultra,Energy Drinks,High Performance,Zero Sugar,Zero Sugar,Mega Can,Aluminium,500,500ml,66,168,66,520,0.85,2.50,1.65,32.0,2,4,12,TRUE,#E0E0E0,🔋
+MN-MANGO-500,Monster Mango Loco 500ml Mega Can,Monster Energy,Juice,Energy Drinks,High Performance,Tropical,Regular,Mega Can,Aluminium,500,500ml,66,168,66,540,0.88,2.55,1.67,19.5,1,2,12,FALSE,#0099B8,🥭
+EV-WTR-500,Evian Natural Mineral Water 500ml Bottle,Evian,Mineral,Waters & Juices,Still Water,Original,No Added Sugar,PET Bottle,PET Plastic,500,500ml,64,210,64,520,0.35,1.30,0.95,28.0,2,4,24,TRUE,#F47999,💧
+SP-SPRK-500,San Pellegrino Sparkling Water 500ml Bottle,San Pellegrino,Sparkling,Waters & Juices,Sparkling Water,Original,No Added Sugar,Glass Bottle,Glass,500,500ml,68,220,68,530,0.45,1.65,1.20,19.0,1,3,24,TRUE,#003A70,✨
+INN-SMTH-250,Innocent Mango Passionfruit Smoothie 250ml,Innocent,Smoothie,Waters & Juices,Smoothie,Tropical,No Added Sugar,PET Bottle,PET Plastic,250,250ml,56,150,56,280,0.90,2.40,1.50,15.0,1,2,12,FALSE,#FFAE00,🧃
+OAT-ICED-330,Oatly Iced Coffee Mocha 330ml Carton,Oatly,Coffee,Ready-To-Drink Coffee & Dairy,Cold Brew Dairy-Free,Original,Regular,Prisma Carton,Carton,330,330ml,60,150,60,360,0.85,2.20,1.35,17.5,1,3,18,TRUE,#654321,☕
+CC-BOT-1500,Coca-Cola Original 1.5L PET Bottle,Coca-Cola,Classic,Large Bottles (1L+),Cola,Original,Regular,Large Bottle,PET Plastic,1500,1.5L,95,330,95,1580,0.90,2.75,1.85,14.0,1,3,6,TRUE,#D80008,🍾
+PEP-BOT-1500,Pepsi Max 1.5L PET Bottle,Pepsi,Max,Large Bottles (1L+),Cola,Zero Sugar,Zero Sugar,Large Bottle,PET Plastic,1500,1.5L,95,330,95,1550,0.85,2.50,1.65,11.0,1,2,6,TRUE,#003366,🍾

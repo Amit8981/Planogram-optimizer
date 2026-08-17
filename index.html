@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cooler Planogram AI Studio - Interactive Brand Sequencing & Assortment Optimizer</title>
+  <meta name="description" content="Commercial beverage cooler space allocation with interactive brand order sequencing, 3 optimization objectives, 5 cooler models, multi-select facet filters, and CSV pipelines.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Top App Navigation & Global Bar -->
+  <header class="app-navbar">
+    <div class="navbar-brand">
+      <div class="brand-badge-icon">❄️</div>
+      <div class="brand-titles">
+        <h1>PlanogramAI Studio</h1>
+        <span class="brand-subtitle">Interactive Space Optimization & Brand Flow Engine</span>
+      </div>
+    </div>
+
+    <div class="navbar-center-controls">
+      <!-- Cooler Model Selector (5 Models) -->
+      <div class="fixture-selector-group">
+        <label for="select-cooler-fixture">Cooler Model:</label>
+        <select id="select-cooler-fixture" class="select-dropdown"></select>
+      </div>
+
+      <!-- Optimization Objective Selector (3 Objectives) -->
+      <div class="objective-selector-group">
+        <span class="objective-group-label">Goal:</span>
+        <div class="objective-btn-group">
+          <button class="objective-btn active" data-objective="profit" title="Maximize Total Dollar Profit ($)">
+            <span>📈 Profit</span>
+          </button>
+          <button class="objective-btn" data-objective="revenue" title="Maximize Total Dollar Revenue ($)">
+            <span>💵 Revenue</span>
+          </button>
+          <button class="objective-btn" data-objective="volume" title="Maximize Unit Throughput / Volume Movement">
+            <span>📦 Volume</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Toggles for Drawers -->
+      <button class="btn-drawer-toggle active" id="btn-toggle-assortment-drawer" title="Toggle SKU Selection Zone">
+        <span>🎯 SKU Assortment</span>
+        <span class="drawer-badge" id="badge-selected-sku-count">22 / 22 Active</span>
+      </button>
+
+      <button class="btn-drawer-toggle active" id="btn-toggle-brand-order" title="Toggle Brand Sequencing Flow">
+        <span>🏷️ Brand Order</span>
+        <span class="drawer-badge" id="badge-brand-order-count">10 Brands</span>
+      </button>
+    </div>
+
+    <div class="navbar-actions">
+      <button class="btn-primary-gradient" id="btn-run-optimization">
+        <span>🚀 RUN SOLVER</span>
+      </button>
+      <div class="export-dropdown">
+        <button class="btn-secondary" id="btn-export-menu">Export ▾</button>
+        <div class="export-menu-dropdown">
+          <button class="dropdown-item" id="btn-export-json">💾 Planogram JSON</button>
+          <button class="dropdown-item" id="btn-export-csv">📄 Store Pick-List (CSV)</button>
+          <button class="dropdown-item" id="btn-export-assortment-csv">📦 Filtered Assortment (CSV)</button>
+          <button class="dropdown-item" id="btn-print-spec">🖨️ Printable Spec</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- INPUT ZONE 1: SKU ASSORTMENT SELECTION & MIN FACINGS TABLE -->
+  <section class="assortment-filter-bar" id="assortment-filter-bar">
+    <div class="filter-bar-header">
+      <div class="filter-header-left">
+        <span class="filter-zone-badge">ZONE 1</span>
+        <span class="filter-title">🎯 SKU Assortment & User Minimum Facings:</span>
+        <span class="filter-subtitle">Select active SKUs and specify minimum guaranteed facings for each product</span>
+      </div>
+      <div class="filter-header-actions">
+        <button class="btn-filter-action primary" id="btn-select-all-skus">✅ Select All (22)</button>
+        <button class="btn-filter-action" id="btn-select-core-skus">⭐ Core SKUs Only</button>
+        <button class="btn-filter-action" id="btn-clear-all-skus">⬜ Deselect All</button>
+        <button class="btn-filter-action secondary" id="btn-reset-filters">🔄 Reset Filters</button>
+      </div>
+    </div>
+
+    <!-- Multi-Select Facet Controls Grid -->
+    <div class="filter-controls-grid">
+      <!-- Search Input -->
+      <div class="filter-group search-group">
+        <label for="input-sku-search">🔍 Search SKU:</label>
+        <input type="text" id="input-sku-search" placeholder="Type name, brand, or flavor..." class="filter-input-text">
+      </div>
+
+      <!-- Multi-Select Brand -->
+      <div class="filter-group multi-select-wrapper" id="wrapper-brand-multiselect">
+        <label>🏷️ Brand (Multi-Select):</label>
+        <div class="custom-multiselect" id="ms-brand">
+          <button type="button" class="multiselect-trigger" id="btn-ms-brand">
+            <span class="ms-label">All Brands (10)</span>
+            <span class="ms-arrow">▾</span>
+          </button>
+          <div class="multiselect-dropdown" id="dropdown-ms-brand">
+            <div class="ms-actions-row">
+              <button type="button" class="ms-action-link" id="ms-brand-select-all">Select All</button>
+              <button type="button" class="ms-action-link" id="ms-brand-clear-all">Clear</button>
+            </div>
+            <div class="ms-options-list" id="ms-brand-options"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Multi-Select Category -->
+      <div class="filter-group multi-select-wrapper" id="wrapper-category-multiselect">
+        <label>📂 Category (Multi-Select):</label>
+        <div class="custom-multiselect" id="ms-category">
+          <button type="button" class="multiselect-trigger" id="btn-ms-category">
+            <span class="ms-label">All Categories (5)</span>
+            <span class="ms-arrow">▾</span>
+          </button>
+          <div class="multiselect-dropdown" id="dropdown-ms-category">
+            <div class="ms-actions-row">
+              <button type="button" class="ms-action-link" id="ms-category-select-all">Select All</button>
+              <button type="button" class="ms-action-link" id="ms-category-clear-all">Clear</button>
+            </div>
+            <div class="ms-options-list" id="ms-category-options"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Multi-Select Pack Type -->
+      <div class="filter-group multi-select-wrapper" id="wrapper-packtype-multiselect">
+        <label>📦 Pack Type (Multi-Select):</label>
+        <div class="custom-multiselect" id="ms-packtype">
+          <button type="button" class="multiselect-trigger" id="btn-ms-packtype">
+            <span class="ms-label">All Pack Types</span>
+            <span class="ms-arrow">▾</span>
+          </button>
+          <div class="multiselect-dropdown" id="dropdown-ms-packtype">
+            <div class="ms-actions-row">
+              <button type="button" class="ms-action-link" id="ms-packtype-select-all">Select All</button>
+              <button type="button" class="ms-action-link" id="ms-packtype-clear-all">Clear</button>
+            </div>
+            <div class="ms-options-list" id="ms-packtype-options"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Multi-Select Pack Size -->
+      <div class="filter-group multi-select-wrapper" id="wrapper-packsize-multiselect">
+        <label>📏 Pack Size (Multi-Select):</label>
+        <div class="custom-multiselect" id="ms-packsize">
+          <button type="button" class="multiselect-trigger" id="btn-ms-packsize">
+            <span class="ms-label">All Pack Sizes</span>
+            <span class="ms-arrow">▾</span>
+          </button>
+          <div class="multiselect-dropdown" id="dropdown-ms-packsize">
+            <div class="ms-actions-row">
+              <button type="button" class="ms-action-link" id="ms-packsize-select-all">Select All</button>
+              <button type="button" class="ms-action-link" id="ms-packsize-clear-all">Clear</button>
+            </div>
+            <div class="ms-options-list" id="ms-packsize-options"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Multi-Select Sugar Type -->
+      <div class="filter-group multi-select-wrapper" id="wrapper-sugartype-multiselect">
+        <label>🍬 Sugar Type (Multi-Select):</label>
+        <div class="custom-multiselect" id="ms-sugartype">
+          <button type="button" class="multiselect-trigger" id="btn-ms-sugartype">
+            <span class="ms-label">All Sugar Types</span>
+            <span class="ms-arrow">▾</span>
+          </button>
+          <div class="multiselect-dropdown" id="dropdown-ms-sugartype">
+            <div class="ms-actions-row">
+              <button type="button" class="ms-action-link" id="ms-sugartype-select-all">Select All</button>
+              <button type="button" class="ms-action-link" id="ms-sugartype-clear-all">Clear</button>
+            </div>
+            <div class="ms-options-list" id="ms-sugartype-options"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Optional Flavor Filter (Placed at the end) -->
+      <div class="filter-group multi-select-wrapper" id="wrapper-flavor-multiselect">
+        <label>🍓 Flavor (Optional):</label>
+        <div class="custom-multiselect" id="ms-flavor">
+          <button type="button" class="multiselect-trigger" id="btn-ms-flavor">
+            <span class="ms-label">All Flavors</span>
+            <span class="ms-arrow">▾</span>
+          </button>
+          <div class="multiselect-dropdown" id="dropdown-ms-flavor">
+            <div class="ms-actions-row">
+              <button type="button" class="ms-action-link" id="ms-flavor-select-all">Select All</button>
+              <button type="button" class="ms-action-link" id="ms-flavor-clear-all">Clear</button>
+            </div>
+            <div class="ms-options-list" id="ms-flavor-options"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interactive SKU Selection Table & User Min Facings List -->
+    <div class="sku-selection-header-row">
+      <span class="sku-selection-title">📋 Product Assortment List (Select/Deselect & Set Minimum Facings per SKU):</span>
+      <span class="sku-selection-subtitle text-muted">Adjust user-defined min facings for priority space allocation</span>
+    </div>
+
+    <div class="sku-table-container">
+      <table class="sku-assortment-table">
+        <thead>
+          <tr>
+            <th class="th-select" style="width: 45px; text-align: center;">Select</th>
+            <th style="min-width: 200px;">Product Name</th>
+            <th>Brand</th>
+            <th>Category</th>
+            <th>Format & Size</th>
+            <th>Price & Margin</th>
+            <th>Velocity</th>
+            <th style="min-width: 155px; text-align: center;">Min Facings (User Input)</th>
+            <th style="width: 90px; text-align: center;">Status</th>
+          </tr>
+        </thead>
+        <tbody id="sku-table-tbody">
+          <!-- Rendered dynamically by AssortmentSelector -->
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- INPUT ZONE 2: BRAND ORDER & FLOW SEQUENCING BAR -->
+  <section class="brand-order-bar" id="brand-order-bar">
+    <div class="brand-order-header">
+      <div class="brand-order-title-group">
+        <span class="filter-zone-badge">ZONE 2</span>
+        <span class="brand-order-title">🏷️ Interactive Brand Sequence & Flow:</span>
+        <span class="brand-order-subtitle">Drag cards or use ◀ / ▶ arrows to define left-to-right merchandise sequence on shelves</span>
+      </div>
+      <div class="brand-order-presets">
+        <span class="presets-label">Quick Sort:</span>
+        <button class="btn-preset-sort" id="btn-sort-brand-velocity">⚡ By Velocity</button>
+        <button class="btn-preset-sort" id="btn-sort-brand-margin">💰 By Margin</button>
+        <button class="btn-preset-sort" id="btn-sort-brand-alpha">🔤 A-Z</button>
+        <button class="btn-preset-sort secondary" id="btn-reset-brand-order">🔄 Default Rules</button>
+      </div>
+    </div>
+
+    <!-- Draggable & Reorderable Brand Flow Container -->
+    <div class="brand-sortable-container" id="brand-sortable-container">
+      <!-- Rendered dynamically by BrandOrderManager -->
+    </div>
+  </section>
+
+  <!-- PROMINENT USER ACTION BAR: RUN PLANOGRAM OPTIMIZATION -->
+  <section class="solver-run-action-bar" id="solver-run-action-bar">
+    <div class="solver-status-summary">
+      <span class="status-indicator-dot" id="status-dot"></span>
+      <div class="status-text-group">
+        <strong id="status-main-text">Configuration Ready</strong>
+        <span id="status-sub-text">Click the button below to solve and display the planogram with all KPIs</span>
+      </div>
+    </div>
+
+    <button class="btn-hero-run" id="btn-hero-run-solver">
+      <span class="btn-hero-icon">🚀</span>
+      <span class="btn-hero-label">RUN PLANOGRAM OPTIMIZATION</span>
+    </button>
+  </section>
+
+  <!-- RESULTS CONTAINER (SHOWN AFTER HITTING 'RUN') -->
+  <div id="results-output-wrapper" class="results-wrapper initial-unsolved">
+
+    <!-- INITIAL STANDBY EMPTY STATE (Visible before clicking RUN) -->
+    <div class="placeholder-standby-container" id="placeholder-standby">
+      <div class="standby-card">
+        <div class="standby-icon">❄️</div>
+        <h2>Ready for Planogram Optimization</h2>
+        <p>Your cooler model, optimization objective, SKU selection, and brand sequence are configured above.</p>
+        <p class="standby-instruction">Click the <strong>"🚀 RUN PLANOGRAM OPTIMIZATION"</strong> button above to run the 2-Stage mathematical engine and generate the full 3D visual planogram and KPIs.</p>
+        <button class="btn-primary-gradient standby-run-btn" id="btn-standby-run">
+          <span>🚀 Run Solver Now</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- SOLVED OUTPUTS: 3 Primary Optimization KPIs Ribbon -->
+    <section class="kpi-ribbon" id="kpi-ribbon" aria-label="Key Performance Indicators" style="display: none;">
+      
+      <!-- KPI 1: Total Profit -->
+      <div class="kpi-card highlight-profit">
+        <div class="kpi-header-row">
+          <span class="kpi-label">📈 Total Profit (Gross Margin)</span>
+          <span class="kpi-badge profit-badge" id="kpi-margin-pct">0.0% Margin</span>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value text-success" id="kpi-profit">$0.00</span>
+          <span class="kpi-subtext">gross profit / day</span>
+        </div>
+        <div class="kpi-footer-metric">
+          <span>Unit Profit Density: <strong id="kpi-profit-density">$0.00/facing</strong></span>
+        </div>
+      </div>
+
+      <!-- KPI 2: Total Revenue -->
+      <div class="kpi-card highlight-revenue">
+        <div class="kpi-header-row">
+          <span class="kpi-label">💵 Total Revenue</span>
+          <span class="kpi-badge revenue-badge">Gross Sales</span>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value text-highlight" id="kpi-revenue">$0.00</span>
+          <span class="kpi-subtext">sales / day</span>
+        </div>
+        <div class="kpi-footer-metric">
+          <span>Daily Unit Price Avg: <strong id="kpi-avg-price">$0.00</strong></span>
+        </div>
+      </div>
+
+      <!-- KPI 3: Volume Occupied & Movement -->
+      <div class="kpi-card highlight-volume">
+        <div class="kpi-header-row">
+          <span class="kpi-label">📦 Volume Occupied & Movement</span>
+          <span class="kpi-badge volume-badge" id="kpi-volume-occupancy-pct">0.0% Vol Occupied</span>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value text-warning" id="kpi-volume-occupied">0.0 L</span>
+          <span class="kpi-subtext" id="kpi-volume-movement-subtext">0 units/day sold</span>
+        </div>
+        <div class="kpi-footer-metric">
+          <span>Physical Capacity: <strong id="kpi-volume-liters-total">0.0 L Total</strong> (<span id="kpi-fill-rate">0%</span> Width Full)</span>
+        </div>
+      </div>
+
+      <!-- Scenario Objective Impact & Assortment Stat -->
+      <div class="kpi-card highlight-objective">
+        <div class="kpi-header-row">
+          <span class="kpi-label">🎯 Active Objective Goal</span>
+          <span class="kpi-badge objective-badge" id="kpi-assortment-stat">22 SKUs Active</span>
+        </div>
+        <div class="kpi-value-row">
+          <span class="kpi-value" id="kpi-objective-badge">PROFIT MAX</span>
+          <span class="kpi-subtext" id="kpi-facings-subtext">0 Facings</span>
+        </div>
+        <div class="kpi-footer-metric">
+          <span id="kpi-objective-desc">Maximizing dollar gross margin contribution</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SOLVED OUTPUTS: Main Workspace Layout (Canvas & Sidebar) -->
+    <main class="main-workspace-layout" id="main-workspace-layout" style="display: none;">
+      
+      <!-- Left Column: Visual Canvas & Heatmap Controls -->
+      <section class="canvas-section">
+        
+        <!-- Visual Canvas Controls Toolbar -->
+        <div class="canvas-toolbar">
+          <div class="heatmap-mode-selector">
+            <span class="toolbar-label">Merchandising Overlay:</span>
+            <div class="heatmap-btn-group">
+              <button class="heatmap-toggle-btn active" data-mode="none">Standard Brands</button>
+              <button class="heatmap-toggle-btn" data-mode="margin">Profit Margin</button>
+              <button class="heatmap-toggle-btn" data-mode="velocity">Velocity / Demand</button>
+              <button class="heatmap-toggle-btn" data-mode="dos">Days of Supply (OOS)</button>
+              <button class="heatmap-toggle-btn" data-mode="eye_level">Eye-Level Zone</button>
+            </div>
+          </div>
+
+          <div class="canvas-quick-tips">
+            <span>💡 <em>Drag SKUs or adjust facings on shelves to fine-tune layout</em></span>
+          </div>
+        </div>
+
+        <!-- Live Dynamic Heatmap Legend -->
+        <div id="heatmap-legend-container" class="heatmap-legend-bar" style="display: none;"></div>
+
+        <!-- Cooler Visual Canvas Container -->
+        <div id="cooler-canvas-container" class="cooler-canvas-viewport">
+          <!-- Rendered by CoolerRenderer -->
+        </div>
+      </section>
+
+      <!-- Right Column: Analytics, Compliance & Data Sources -->
+      <aside class="sidebar-analytics-section">
+        <div class="sidebar-tabs-header">
+          <button class="side-tab active" data-target="tab-side-audit">Rule Audit & Health</button>
+          <button class="side-tab" data-target="tab-side-assortment">🎯 SKU Assortment</button>
+          <button class="side-tab" data-target="tab-side-shares">Share of Shelf</button>
+          <button class="side-tab" data-target="tab-side-editor">CSV Data & Rules</button>
+        </div>
+
+        <div class="sidebar-tab-panels">
+          
+          <!-- Panel 1: Extensible Rule Audit & Health Checklist -->
+          <div class="side-tab-panel active" id="tab-side-audit">
+            
+            <!-- Health Summary Banner -->
+            <div class="audit-health-banner">
+              <div class="health-score-group">
+                <span class="health-score-value" id="audit-health-score">100%</span>
+                <div class="health-score-meta">
+                  <strong>Planogram Health Score</strong>
+                  <span id="audit-rules-passed-count">10 of 10 Constraints Maintained</span>
+                </div>
+              </div>
+              <span class="health-status-pill healthy" id="audit-health-pill">✅ Fully Compliant</span>
+            </div>
+
+            <!-- Category Filter for Rules -->
+            <div class="rule-category-filter-bar">
+              <button class="rule-cat-btn active" data-cat="all">All (<span id="count-cat-all">10</span>)</button>
+              <button class="rule-cat-btn" data-cat="physical">Physical (<span id="count-cat-physical">3</span>)</button>
+              <button class="rule-cat-btn" data-cat="pack">Pack Volume (<span id="count-cat-pack">3</span>)</button>
+              <button class="rule-cat-btn" data-cat="merchandising">Brand & Flow (<span id="count-cat-merchandising">4</span>)</button>
+            </div>
+
+            <!-- Extensible Live Rules Checklist -->
+            <div class="audit-rules-checklist" id="audit-rules-checklist">
+              <!-- Dynamically rendered with ticks by RuleAuditor -->
+            </div>
+
+          </div>
+
+          <!-- Panel 2: Dedicated SKU Assortment Selector Tab -->
+          <div class="side-tab-panel" id="tab-side-assortment">
+            <div class="panel-section-title">
+              <h3>🎯 Product Assortment Matrix</h3>
+            </div>
+            <div class="sidebar-sku-quick-bar">
+              <input type="text" id="sidebar-sku-search" placeholder="Filter SKUs..." class="filter-input-text mb-2">
+              <div class="sidebar-sku-actions">
+                <button class="btn-filter-action primary" id="btn-sidebar-select-all">Select All</button>
+                <button class="btn-filter-action" id="btn-sidebar-core-only">Core Only</button>
+                <button class="btn-filter-action secondary" id="btn-sidebar-clear-all">Clear</button>
+              </div>
+            </div>
+            <div class="sidebar-sku-list" id="sidebar-sku-list"></div>
+          </div>
+
+          <!-- Panel 3: Share of Shelf Breakdown -->
+          <div class="side-tab-panel" id="tab-side-shares">
+            <div class="panel-section-title">
+              <h3>🏷️ Brand Share of Shelf & Margin Contribution</h3>
+            </div>
+            <div class="table-scroll-wrap">
+              <table class="data-table small">
+                <thead>
+                  <tr>
+                    <th>Brand</th>
+                    <th>Facings</th>
+                    <th>Space Share</th>
+                    <th>Daily Rev</th>
+                    <th>Margin</th>
+                  </tr>
+                </thead>
+                <tbody id="brand-share-tbody"></tbody>
+              </table>
+            </div>
+
+            <div class="panel-section-title mt-4">
+              <h3>📦 Category Space Allocation</h3>
+            </div>
+            <div class="table-scroll-wrap">
+              <table class="data-table small">
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th>Facings</th>
+                    <th>Space %</th>
+                    <th>Daily Rev</th>
+                    <th>Margin</th>
+                  </tr>
+                </thead>
+                <tbody id="category-share-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Panel 4: Data Sources & JSON Config Editor -->
+          <div class="side-tab-panel" id="tab-side-editor">
+            <div id="editor-panel-container">
+              <!-- Rendered by RuleEditor -->
+            </div>
+          </div>
+
+        </div>
+      </aside>
+
+    </main>
+  </div>
+
+  <!-- Standalone Bundled Script -->
+  <script src="app.bundle.js"></script>
+  <script>
+    // Tab switching for sidebar
+    document.querySelectorAll('.side-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.side-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.side-tab-panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        const targetId = tab.getAttribute('data-target');
+        document.getElementById(targetId)?.classList.add('active');
+      });
+    });
+
+    // Export dropdown toggle
+    const exportBtn = document.getElementById('btn-export-menu');
+    const exportMenu = document.querySelector('.export-menu-dropdown');
+    exportBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      exportMenu?.classList.toggle('show');
+    });
+    document.addEventListener('click', () => {
+      exportMenu?.classList.remove('show');
+    });
+
+    // Brand Order Bar Toggle Button
+    const btnToggleBrandOrder = document.getElementById('btn-toggle-brand-order');
+    const brandOrderBar = document.getElementById('brand-order-bar');
+    btnToggleBrandOrder?.addEventListener('click', () => {
+      brandOrderBar?.classList.toggle('collapsed');
+      btnToggleBrandOrder.classList.toggle('active');
+    });
+
+    // Assortment drawer toggle button
+    const btnToggleAssortment = document.getElementById('btn-toggle-assortment-drawer');
+    const filterBar = document.getElementById('assortment-filter-bar');
+    btnToggleAssortment?.addEventListener('click', () => {
+      filterBar?.classList.toggle('collapsed');
+      btnToggleAssortment.classList.toggle('active');
+    });
+  </script>
+</body>
+</html>

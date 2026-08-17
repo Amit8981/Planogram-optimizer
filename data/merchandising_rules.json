@@ -1,0 +1,137 @@
+{
+  "ruleset_version": "1.0",
+  "brand_order": [
+    {
+      "brand": "Coca-Cola",
+      "priority": 1,
+      "preferred_doors": [1],
+      "adjacent_brands": ["Sprite", "Fanta"],
+      "block_color": "#E61B23"
+    },
+    {
+      "brand": "Sprite",
+      "priority": 2,
+      "preferred_doors": [1],
+      "adjacent_brands": ["Coca-Cola", "Fanta"],
+      "block_color": "#008B45"
+    },
+    {
+      "brand": "Fanta",
+      "priority": 3,
+      "preferred_doors": [1],
+      "adjacent_brands": ["Sprite", "Coca-Cola", "Pepsi"],
+      "block_color": "#FF7900"
+    },
+    {
+      "brand": "Pepsi",
+      "priority": 4,
+      "preferred_doors": [1, 2],
+      "adjacent_brands": ["Fanta", "Monster Energy"],
+      "block_color": "#004B93"
+    },
+    {
+      "brand": "Red Bull",
+      "priority": 5,
+      "preferred_doors": [2],
+      "adjacent_brands": ["Monster Energy", "Oatly"],
+      "block_color": "#1C355E"
+    },
+    {
+      "brand": "Monster Energy",
+      "priority": 6,
+      "preferred_doors": [2],
+      "adjacent_brands": ["Red Bull", "Oatly"],
+      "block_color": "#101010"
+    },
+    {
+      "brand": "Evian",
+      "priority": 7,
+      "preferred_doors": [1, 2],
+      "adjacent_brands": ["San Pellegrino", "Innocent"],
+      "block_color": "#F47999"
+    },
+    {
+      "brand": "San Pellegrino",
+      "priority": 8,
+      "preferred_doors": [1, 2],
+      "adjacent_brands": ["Evian", "Innocent"],
+      "block_color": "#003A70"
+    },
+    {
+      "brand": "Innocent",
+      "priority": 9,
+      "preferred_doors": [1, 2],
+      "adjacent_brands": ["San Pellegrino", "Oatly"],
+      "block_color": "#FFAE00"
+    },
+    {
+      "brand": "Oatly",
+      "priority": 10,
+      "preferred_doors": [2],
+      "adjacent_brands": ["Innocent", "Monster Energy"],
+      "block_color": "#654321"
+    }
+  ],
+  "shelf_preferences": [
+    {
+      "category": "Energy Drinks",
+      "preferred_tiers": ["eye_level", "reach_level"],
+      "forbidden_tiers": ["bottom"],
+      "priority_weight": 1.5,
+      "min_share_of_shelf_pct": 25.0
+    },
+    {
+      "category": "Waters & Juices",
+      "preferred_tiers": ["top", "reach_level"],
+      "forbidden_tiers": ["bottom"],
+      "priority_weight": 1.2,
+      "min_share_of_shelf_pct": 18.0
+    },
+    {
+      "category": "Ready-To-Drink Coffee & Dairy",
+      "preferred_tiers": ["reach_level", "touch_level"],
+      "forbidden_tiers": [],
+      "priority_weight": 1.1,
+      "min_share_of_shelf_pct": 8.0
+    },
+    {
+      "category": "Carbonated Soft Drinks",
+      "preferred_tiers": ["eye_level", "touch_level", "reach_level"],
+      "forbidden_tiers": [],
+      "priority_weight": 1.3,
+      "min_share_of_shelf_pct": 35.0
+    },
+    {
+      "category": "Large Bottles (1L+)",
+      "preferred_tiers": ["bottom"],
+      "forbidden_tiers": ["top", "reach_level", "eye_level", "touch_level"],
+      "priority_weight": 2.0,
+      "min_share_of_shelf_pct": 10.0
+    }
+  ],
+  "flavor_sequence": [
+    "Original",
+    "Zero Sugar",
+    "Diet",
+    "Cherry",
+    "Citrus",
+    "Berry",
+    "Tropical"
+  ],
+  "engine_weights": {
+    "profit_weight": 1.0,
+    "velocity_weight": 0.8,
+    "eye_level_margin_boost": 0.4,
+    "brand_adjacency_bonus": 0.35,
+    "brand_blocking_bonus": 0.5,
+    "flavor_sequence_bonus": 0.2,
+    "space_elasticity_gamma": 0.20,
+    "unallocated_space_penalty": 0.15
+  },
+  "operational_constraints": {
+    "strict_brand_blocking": true,
+    "prevent_vertical_brand_fragmentation": true,
+    "min_shelf_fill_rate_pct": 85.0,
+    "target_days_of_supply": 2.0
+  }
+}
