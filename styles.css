@@ -1552,9 +1552,10 @@ body {
   background: rgba(10, 15, 25, 0.5);
   border-radius: var(--radius-sm);
   border-bottom: 2px solid var(--cooler-rack-wire);
-  overflow: hidden;
+  overflow: visible;
   box-sizing: border-box;
   transition: background-color var(--transition-fast);
+  position: relative;
 }
 
 .shelf-deck.drag-hover {
@@ -1578,13 +1579,13 @@ body {
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
   user-select: none;
   box-sizing: border-box;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .sku-facing-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 10px rgba(0,0,0,0.6);
-  z-index: 20;
+  z-index: 100;
 }
 
 .sku-facing-card.dragging {
@@ -1645,93 +1646,121 @@ body {
 }
 
 .sku-size-tag {
-  font-size: 0.55rem;
-  color: rgba(255,255,255,0.65);
+  font-size: 0.58rem;
+  color: rgba(255,255,255,0.7);
   font-family: var(--font-mono);
 }
 
 .sku-heatmap-badge {
-  background: rgba(0, 0, 0, 0.65);
-  font-size: 0.6rem;
-  font-weight: 700;
-  font-family: var(--font-mono);
-  padding: 1px 3px;
-  border-radius: 3px;
-  text-align: center;
+  background: rgba(0,0,0,0.7);
   color: #FFFFFF;
+  font-size: 0.58rem;
+  font-weight: 700;
+  padding: 1px 3px;
+  border-radius: 2px;
+  text-align: center;
   margin-top: 1px;
 }
 
 .sku-quick-controls {
-  display: none;
+  display: flex;
+  justify-content: space-between;
   gap: 2px;
-  justify-content: center;
   margin-top: 2px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
 }
 
 .sku-facing-card:hover .sku-quick-controls {
-  display: flex;
+  opacity: 1;
 }
 
 .btn-facing-step {
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0,0,0,0.6);
   color: #FFFFFF;
-  border: 1px solid rgba(255,255,255,0.3);
-  font-size: 0.62rem;
-  font-weight: 700;
-  width: 16px;
-  height: 16px;
-  border-radius: 3px;
-  cursor: pointer;
+  border: none;
+  border-radius: 2px;
+  width: 14px;
+  height: 14px;
+  font-size: 0.65rem;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  padding: 0;
 }
 
 .btn-facing-step:hover {
   background: #3B82F6;
 }
 
-/* Tooltip on SKU hover */
+/* Tooltip on SKU hover & click inspection */
 .sku-hover-tooltip {
   display: none;
   position: absolute;
-  bottom: calc(100% + 8px);
+  bottom: calc(100% + 10px);
   left: 50%;
   transform: translateX(-50%);
-  background-color: #0F172A;
-  border: 1px solid var(--border-color);
+  background-color: #0B132B;
+  border: 1px solid rgba(56, 189, 248, 0.45);
   border-radius: var(--radius-md);
-  padding: 0.75rem 0.95rem;
-  box-shadow: var(--shadow-lg);
-  min-width: 240px;
+  padding: 0.85rem 1rem;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7), 0 0 1px 1px rgba(56, 189, 248, 0.2);
+  min-width: 280px;
+  max-width: 340px;
   pointer-events: none;
-  z-index: 500;
+  z-index: 99999;
 }
 
 .sku-facing-card:hover .sku-hover-tooltip {
   display: block;
+  animation: fadeIn 0.2s ease;
+}
+
+/* For top shelf tiers, render tooltip downward so it never clips off the top */
+.cooler-bay .shelf-row-container:first-child .sku-hover-tooltip,
+.cooler-bay .shelf-row-container:nth-child(2) .sku-hover-tooltip {
+  bottom: auto;
+  top: calc(100% + 10px);
 }
 
 .tooltip-title {
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-size: 0.82rem;
+  font-weight: 800;
   color: #FFFFFF;
-  margin-bottom: 0.4rem;
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: 0.3rem;
+  margin-bottom: 0.45rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  padding-bottom: 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .tooltip-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 0.25rem;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   color: var(--text-secondary);
 }
 
 .tooltip-grid strong {
   color: #FFFFFF;
+}
+
+.tooltip-ai-rationale {
+  background: rgba(56, 189, 248, 0.12);
+  border-left: 3px solid #38BDF8;
+  padding: 0.45rem 0.6rem;
+  border-radius: 4px;
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: #E0F2FE;
+}
+
+.tooltip-ai-rationale strong {
+  color: #38BDF8;
 }
 
 /* Cooler Base Grill */

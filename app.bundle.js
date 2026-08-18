@@ -1829,6 +1829,11 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
         this.draggedItem = null;
       });
 
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.btn-facing-step')) return;
+        this.openSkuInspectionModal(sku, placement, shelf);
+      });
+
       return card;
     }
 
@@ -1940,6 +1945,46 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
         return `Golden eye-level placement to maximize impulse consumer visibility.`;
       }
       return `Balanced multi-brand facing allocation within ${shelf.usable_width_mm}mm door bound.`;
+    }
+
+    openSkuInspectionModal(sku, placement, shelf) {
+      const modal = document.getElementById('sku-inspection-modal');
+      if (!modal) return;
+
+      const emojiEl = document.getElementById('inspect-sku-emoji');
+      const titleEl = document.getElementById('inspect-sku-title');
+      const subtitleEl = document.getElementById('inspect-sku-subtitle');
+      const reasonEl = document.getElementById('inspect-ai-reason-text');
+      const locEl = document.getElementById('inspect-shelf-loc');
+      const facingsEl = document.getElementById('inspect-facings');
+      const capEl = document.getElementById('inspect-capacity');
+      const headroomEl = document.getElementById('inspect-headroom');
+      const priceEl = document.getElementById('inspect-price');
+      const marginEl = document.getElementById('inspect-margin');
+      const velEl = document.getElementById('inspect-velocity');
+      const profitEl = document.getElementById('inspect-daily-profit');
+
+      if (emojiEl) emojiEl.textContent = sku.image_emoji || '🥤';
+      if (titleEl) titleEl.textContent = sku.name;
+      if (subtitleEl) subtitleEl.textContent = `${sku.brand} • ${sku.category} • ${sku.pack_type} (${sku.pack_size_label})`;
+      if (reasonEl) reasonEl.textContent = this.getAiFacingRationale(sku, placement, shelf);
+
+      const unitsDeep = placement.units_deep || Math.max(1, Math.floor(shelf.usable_depth_mm / sku.dimensions_mm.depth));
+      const totalUnits = placement.facings * unitsDeep;
+      const skuHeight = sku.dimensions_mm.height;
+      const airGap = Math.max(0, shelf.clearance_height_mm - skuHeight);
+      const estDailyProfit = (sku.sales_velocity_units_day || 20) * (placement.facings ** 0.20) * (shelf.eye_level_score || 0.5) * sku.margin;
+
+      if (locEl) locEl.textContent = `${shelf.door_label || `Door ${shelf.door_index}`} (${shelf.tier_label || shelf.shelf_id})`;
+      if (facingsEl) facingsEl.textContent = `${placement.facings} Facings (${placement.total_placement_width_mm || placement.facings * placement.width_mm}mm / ${shelf.usable_width_mm}mm)`;
+      if (capEl) capEl.textContent = `${totalUnits} Units (${unitsDeep} Deep)`;
+      if (headroomEl) headroomEl.textContent = `${airGap}mm Air Gap (${skuHeight}mm H / ${shelf.clearance_height_mm}mm shelf)`;
+      if (priceEl) priceEl.textContent = `$${sku.unit_price.toFixed(2)}`;
+      if (marginEl) marginEl.textContent = `+$${sku.margin.toFixed(2)}`;
+      if (velEl) velEl.textContent = `${sku.sales_velocity_units_day} units/day`;
+      if (profitEl) profitEl.textContent = `$${estDailyProfit.toFixed(2)} / day`;
+
+      modal.style.display = 'flex';
     }
   }
 

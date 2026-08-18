@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260818_7">
+  <link rel="stylesheet" href="styles.css?v=20260818_8">
 </head>
 <body>
 
@@ -1042,8 +1042,61 @@
     </div>
   </div>
 
+  <!-- SKU PLACEMENT AI INSPECTION MODAL (Click on any cooler canvas product) -->
+  <div class="modal-overlay" id="sku-inspection-modal" style="display: none;">
+    <div class="modal-card sku-inspection-modal-card" style="max-width: 550px;">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon" id="inspect-sku-emoji">🥤</span>
+          <div>
+            <h2 id="inspect-sku-title">Product AI Placement Inspector</h2>
+            <span class="modal-subtitle" id="inspect-sku-subtitle">Detailed AI rationale and physical space analysis</span>
+          </div>
+        </div>
+        <button type="button" class="btn-close-modal" id="btn-close-sku-inspect" onclick="document.getElementById('sku-inspection-modal').style.display='none'">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem;">
+        <!-- AI Rationale Banner -->
+        <div class="inspect-ai-banner" id="inspect-ai-banner" style="background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.35); border-left: 4px solid #38BDF8; padding: 0.75rem 1rem; border-radius: var(--radius-md);">
+          <div style="font-weight: 800; color: #38BDF8; font-size: 0.82rem; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.35rem;">
+            <span>🤖 AI Multi-Agent Allocation Rationale:</span>
+          </div>
+          <p id="inspect-ai-reason-text" style="font-size: 0.8rem; line-height: 1.45; color: #E0F2FE; margin: 0;"></p>
+        </div>
+
+        <!-- Specifications & Metrics Grid -->
+        <div class="inspect-metrics-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div class="inspect-card" style="background: var(--bg-surface-2); padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+            <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem;">📐 Space & Placement</div>
+            <div style="display: grid; gap: 0.3rem; font-size: 0.75rem;">
+              <div><span>Location:</span> <strong id="inspect-shelf-loc">Door 1 (Shelf 2)</strong></div>
+              <div><span>Facings:</span> <strong id="inspect-facings">3 Facings (198mm)</strong></div>
+              <div><span>Capacity:</span> <strong id="inspect-capacity">24 Units (8 Deep)</strong></div>
+              <div><span>Headroom:</span> <strong id="inspect-headroom">120mm Air Gap</strong></div>
+            </div>
+          </div>
+
+          <div class="inspect-card" style="background: var(--bg-surface-2); padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+            <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem;">💰 Financials & Demand</div>
+            <div style="display: grid; gap: 0.3rem; font-size: 0.75rem;">
+              <div><span>Price / Unit:</span> <strong id="inspect-price">$2.49</strong></div>
+              <div><span>Margin / Unit:</span> <strong id="inspect-margin" class="text-success">+$1.22</strong></div>
+              <div><span>Velocity:</span> <strong id="inspect-velocity">38.5 units/day</strong></div>
+              <div><span>Daily Profit:</span> <strong id="inspect-daily-profit" class="text-success">$58.40/day</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="document.getElementById('sku-inspection-modal').style.display='none'">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Standalone Bundled Script -->
-  <script src="app.bundle.js?v=20260818_7"></script>
+  <script src="app.bundle.js?v=20260818_8"></script>
   <script>
     // Tab switching for sidebar
     document.querySelectorAll('.side-tab').forEach(tab => {
