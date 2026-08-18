@@ -3360,18 +3360,65 @@ tr.sku-row-must_have {
   color: #FBBF24;
 }
 
+.modal-body {
+  padding: 1.25rem 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .shelf-scenarios-modal-card {
   background: var(--bg-surface-1);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
   width: 100%;
-  max-width: 920px;
-  max-height: 85vh;
+  max-width: 960px;
+  max-height: 88vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   animation: scaleUp 0.25s ease;
+}
+
+.shelf-scenarios-modal-card .modal-body {
+  overflow-y: auto;
+  max-height: calc(88vh - 130px);
+  padding: 1.25rem 1.5rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.shelf-scenarios-modal-card .table-scroll-wrap {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 55vh;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.modal-body::-webkit-scrollbar,
+.table-scroll-wrap::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.modal-body::-webkit-scrollbar-track,
+.table-scroll-wrap::-webkit-scrollbar-track {
+  background: var(--bg-surface-1);
+}
+
+.modal-body::-webkit-scrollbar-thumb,
+.table-scroll-wrap::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover,
+.table-scroll-wrap::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-cyan);
 }
 
 .scenarios-summary-banner {
@@ -3383,6 +3430,7 @@ tr.sku-row-must_have {
   font-size: 0.8rem;
   line-height: 1.45;
   color: var(--text-primary);
+  flex-shrink: 0;
 }
 
 .scenarios-summary-banner strong {
@@ -3395,11 +3443,15 @@ tr.sku-row-must_have {
 }
 
 .scenarios-table th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
   background-color: var(--bg-surface-2);
-  padding: 0.6rem 0.75rem;
+  padding: 0.65rem 0.75rem;
   font-size: 0.74rem;
   text-align: left;
   border-bottom: 1px solid var(--border-color);
+  box-shadow: 0 1px 0 var(--border-color);
   color: var(--text-secondary);
 }
 
