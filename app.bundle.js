@@ -1803,6 +1803,9 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
             <div><span>Sales Velocity:</span> <strong>${sku.sales_velocity_units_day} u/day</strong></div>
             <div><span>Price / Margin:</span> <strong>$${sku.unit_price.toFixed(2)} (+$${sku.margin.toFixed(2)})</strong></div>
           </div>
+          <div class="tooltip-ai-rationale" style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(255,255,255,0.2); font-size: 0.72rem; color: var(--accent-cyan);">
+            <span>🤖 AI Rationale:</span> <strong>${this.getAiFacingRationale(sku, placement, shelf)}</strong>
+          </div>
         </div>
       `;
 
@@ -1921,6 +1924,22 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
       }
 
       this.onPlanogramModified(this.planogram);
+    }
+
+    getAiFacingRationale(sku, placement, shelf) {
+      if (placement.facings >= 4) {
+        return `High-velocity flagship mover (${sku.sales_velocity_units_day} u/d) prioritized for ${placement.facings} facings to prevent stockouts.`;
+      }
+      if (sku.margin >= 1.40) {
+        return `Premium margin contributor (+$${sku.margin.toFixed(2)}) allocated optimal shelf width.`;
+      }
+      if (shelf.tier === 'bottom') {
+        return `Heavy pack size (${sku.pack_size_label}) allocated to heavy-duty base shelf.`;
+      }
+      if (shelf.tier === 'eye_level') {
+        return `Golden eye-level placement to maximize impulse consumer visibility.`;
+      }
+      return `Balanced multi-brand facing allocation within ${shelf.usable_width_mm}mm door bound.`;
     }
   }
 
@@ -3188,6 +3207,13 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
     openAiCopilotModal() {
       const modal = document.getElementById('ai-copilot-modal');
       if (modal) modal.style.display = 'flex';
+    }
+
+    runAiQuickCommand(prompt) {
+      this.openAiCopilotModal();
+      const textarea = document.getElementById('ai-prompt-textarea');
+      if (textarea) textarea.value = prompt;
+      return this.runAiSwarm(prompt);
     }
 
     setupAiCopilotUI() {

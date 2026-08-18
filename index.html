@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260818_6">
+  <link rel="stylesheet" href="styles.css?v=20260818_7">
 </head>
 <body>
 
@@ -482,6 +482,25 @@
       
       <!-- Left Column: Visual Canvas & Heatmap Controls -->
       <section class="canvas-section">
+
+        <!-- AI COPILOT INTERACTION BAR (Docked directly on Canvas) -->
+        <div class="canvas-ai-copilot-bar" id="canvas-ai-copilot-bar">
+          <div class="ai-bar-left">
+            <span class="ai-bar-badge">🤖 AI Agent Copilot</span>
+            <span class="ai-bar-prompt-label">Quick Prompts:</span>
+            <div class="ai-bar-chips">
+              <button type="button" class="ai-bar-chip" onclick="window.app && window.app.runAiQuickCommand('Summer Promo: Maximize Energy Drinks on 6 shelves')">⚡ Summer Energy (6 Shelves)</button>
+              <button type="button" class="ai-bar-chip" onclick="window.app && window.app.runAiQuickCommand('Core Dominance: Focus on Coca-Cola on Door 1 eye-level')">🥤 Coke Core Priority</button>
+              <button type="button" class="ai-bar-chip" onclick="window.app && window.app.runAiQuickCommand('Healthy & Zero Sugar: Maximize Diet & Water options')">🍃 Zero Sugar Focus</button>
+              <button type="button" class="ai-bar-chip" onclick="window.app && window.app.runAiQuickCommand('No 1.5L Bottles: Exclude all large bottles and pack cans')">🚫 Cans Only (No 1.5L)</button>
+            </div>
+          </div>
+          <div class="ai-bar-right">
+            <button type="button" class="btn-ai-open-drawer" onclick="window.app && window.app.openAiCopilotModal()">
+              <span>💬 Open Full AI Swarm Studio ➔</span>
+            </button>
+          </div>
+        </div>
         
         <!-- Cooler Model & Variable Shelf Configurator Bar -->
         <div class="cooler-config-bar" id="cooler-config-bar">
@@ -1024,7 +1043,7 @@
   </div>
 
   <!-- Standalone Bundled Script -->
-  <script src="app.bundle.js?v=20260818_6"></script>
+  <script src="app.bundle.js?v=20260818_7"></script>
   <script>
     // Tab switching for sidebar
     document.querySelectorAll('.side-tab').forEach(tab => {
