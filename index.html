@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=20260818_2">
 </head>
 <body>
 
@@ -336,7 +336,7 @@
             <button type="button" class="btn-step-large" id="btn-zone-shelf-plus" title="Increase Shelves">+</button>
           </div>
           <div class="auto-optimal-indicator" id="zone-auto-indicator" style="display: flex; gap: 0.5rem; margin-top: 0.35rem;">
-            <button type="button" class="btn-recommend-now" id="btn-find-optimal-shelves">
+            <button type="button" class="btn-recommend-now" id="btn-find-optimal-shelves" onclick="window.app && window.app.openScenariosModal()">
               <span>💡 Find Optimal Shelves (3..15) 📊</span>
             </button>
           </div>
@@ -500,7 +500,7 @@
                 <span class="shelf-count-display" id="current-shelf-count-val">5 Shelves</span>
                 <button type="button" class="btn-shelf-step" id="btn-shelf-plus" title="Increase Shelf Count">+</button>
               </div>
-              <button type="button" class="btn-link-compare" id="btn-canvas-compare-scenarios" title="Compare all shelf scenarios from 3 to 15">📊 Compare (3..15)</button>
+              <button type="button" class="btn-link-compare" id="btn-canvas-compare-scenarios" onclick="window.app && window.app.openScenariosModal()" title="Compare all shelf scenarios from 3 to 15">📊 Compare (3..15)</button>
             </div>
           </div>
 
@@ -517,7 +517,7 @@
             <strong>🏆 AI Optimal Recommendation:</strong>
             <span id="canvas-optimal-reason-text">5 Shelves per door yields the highest profit ($1,361.12/day).</span>
           </div>
-          <button type="button" class="btn-link-compare" id="btn-banner-compare-scenarios">Compare All Scenarios (3..15) 📊</button>
+          <button type="button" class="btn-link-compare" id="btn-banner-compare-scenarios" onclick="window.app && window.app.openScenariosModal()">Compare All Scenarios (3..15) 📊</button>
         </div>
 
         <!-- Shelf Heights Adjuster Dropdown Drawer -->
@@ -878,10 +878,10 @@
           <span class="modal-icon">📊</span>
           <div>
             <h2>AI Shelf Count Optimization — Scenario Evaluation</h2>
-            <span class="modal-subtitle">Mathematical evaluation of objective yield across 3, 4, 5, and 6 shelves per door</span>
+            <span class="modal-subtitle">Mathematical evaluation of objective yield across 3 to 15 shelves per door</span>
           </div>
         </div>
-        <button type="button" class="btn-close-modal" id="btn-close-scenarios">&times;</button>
+        <button type="button" class="btn-close-modal" id="btn-close-scenarios" onclick="document.getElementById('shelf-scenarios-modal').style.display='none'">&times;</button>
       </div>
       <div class="modal-body">
         <div class="scenarios-summary-banner" id="scenarios-summary-banner">
@@ -908,13 +908,13 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn-secondary" id="btn-dismiss-scenarios">Close</button>
+        <button type="button" class="btn-secondary" id="btn-dismiss-scenarios" onclick="document.getElementById('shelf-scenarios-modal').style.display='none'">Close</button>
       </div>
     </div>
   </div>
 
   <!-- Standalone Bundled Script -->
-  <script src="app.bundle.js"></script>
+  <script src="app.bundle.js?v=20260818_2"></script>
   <script>
     // Tab switching for sidebar
     document.querySelectorAll('.side-tab').forEach(tab => {
