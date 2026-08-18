@@ -2877,8 +2877,6 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
       // Auto-Optimize Shelves Switches
       const zoneAutoChk = document.getElementById('chk-auto-shelves');
       const canvasAutoChk = document.getElementById('chk-canvas-auto-shelves');
-      const zoneAutoIndicator = document.getElementById('zone-auto-indicator');
-      const canvasCompareBtn = document.getElementById('btn-canvas-compare-scenarios');
       const zoneShelfStepperWrap = document.getElementById('zone-shelf-stepper-wrap');
       const canvasShelfStepperWrap = document.getElementById('canvas-shelf-stepper-wrap');
 
@@ -2886,9 +2884,6 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
         this.autoOptimizeShelves = checked;
         if (zoneAutoChk) zoneAutoChk.checked = checked;
         if (canvasAutoChk) canvasAutoChk.checked = checked;
-
-        if (zoneAutoIndicator) zoneAutoIndicator.style.display = checked ? 'flex' : 'none';
-        if (canvasCompareBtn) canvasCompareBtn.style.display = checked ? 'inline-block' : 'none';
 
         if (zoneShelfStepperWrap) zoneShelfStepperWrap.style.opacity = checked ? '0.5' : '1';
         if (canvasShelfStepperWrap) canvasShelfStepperWrap.style.opacity = checked ? '0.5' : '1';
@@ -2983,23 +2978,29 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
         const optimizer = new PlanogramOptimizer(activeAssortment, [testCooler], this.rules, this.currentObjective);
         const result = optimizer.optimize(testCooler.cooler_id, { objective: this.currentObjective });
 
+        const margin = result.analytics?.financials?.projectedDailyMargin || 0;
+        const revenue = result.analytics?.financials?.projectedDailyRevenue || 0;
+        const units = result.analytics?.volumeMetrics?.totalDailyUnits || 0;
+        const totalFacings = result.analytics?.spaceMetrics?.totalFacings || 0;
+        const fillRatePct = result.analytics?.spaceMetrics?.overallSpaceUtilizationPct || 0;
+
         let score = 0;
         if (this.currentObjective === 'profit') {
-          score = result.analytics.total_daily_margin;
+          score = margin;
         } else if (this.currentObjective === 'revenue') {
-          score = result.analytics.total_daily_revenue;
+          score = revenue;
         } else {
-          score = result.analytics.total_daily_units;
+          score = units;
         }
 
         comparisons.push({
           shelf_count: count,
           score: score,
-          margin: result.analytics.total_daily_margin,
-          revenue: result.analytics.total_daily_revenue,
-          units: result.analytics.total_daily_units,
-          total_facings: result.analytics.total_facings,
-          fill_rate_pct: result.analytics.overall_fill_rate_pct,
+          margin: margin,
+          revenue: revenue,
+          units: units,
+          total_facings: totalFacings,
+          fill_rate_pct: fillRatePct,
           result: result
         });
       }
@@ -3030,7 +3031,7 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
 
         banner.innerHTML = `
           <strong>🏆 AI Recommendation for ${objName} Goal:</strong> 
-          Configuring <strong>${winner.shelf_count} Shelves per door</strong> yields the highest objective performance (<strong>${metricTxt}</strong>, ${winner.fill_rate_pct.toFixed(1)}% shelf packed).
+          Configuring <strong>${winner.shelf_count} Shelves per door</strong> yields the highest objective performance (<strong>${metricTxt}</strong>, ${winner.total_facings} facings, ${winner.fill_rate_pct.toFixed(1)}% shelf packed).
         `;
       }
 
@@ -3239,23 +3240,29 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
           const optimizer = new PlanogramOptimizer(activeAssortment, [testCooler], this.rules, this.currentObjective);
           const result = optimizer.optimize(testCooler.cooler_id, { objective: this.currentObjective });
 
+          const margin = result.analytics?.financials?.projectedDailyMargin || 0;
+          const revenue = result.analytics?.financials?.projectedDailyRevenue || 0;
+          const units = result.analytics?.volumeMetrics?.totalDailyUnits || 0;
+          const totalFacings = result.analytics?.spaceMetrics?.totalFacings || 0;
+          const fillRatePct = result.analytics?.spaceMetrics?.overallSpaceUtilizationPct || 0;
+
           let score = 0;
           if (this.currentObjective === 'profit') {
-            score = result.analytics.total_daily_margin;
+            score = margin;
           } else if (this.currentObjective === 'revenue') {
-            score = result.analytics.total_daily_revenue;
+            score = revenue;
           } else {
-            score = result.analytics.total_daily_units;
+            score = units;
           }
 
           this.shelfScenariosComparison.push({
             shelf_count: count,
             score: score,
-            margin: result.analytics.total_daily_margin,
-            revenue: result.analytics.total_daily_revenue,
-            units: result.analytics.total_daily_units,
-            total_facings: result.analytics.total_facings,
-            fill_rate_pct: result.analytics.overall_fill_rate_pct,
+            margin: margin,
+            revenue: revenue,
+            units: units,
+            total_facings: totalFacings,
+            fill_rate_pct: fillRatePct,
             result: result
           });
 
@@ -3282,14 +3289,20 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
 
         const alertBanner = document.getElementById('canvas-optimal-alert-banner');
         const alertReason = document.getElementById('canvas-optimal-reason-text');
-        if (alertBanner && alertReason) {
+        if (alertBanner && alertReason && bestResult) {
           const objName = this.currentObjective.toUpperCase();
           let metricTxt = '';
-          if (this.currentObjective === 'profit') metricTxt = `$${bestResult.analytics.total_daily_margin.toFixed(2)}/day Profit`;
-          else if (this.currentObjective === 'revenue') metricTxt = `$${bestResult.analytics.total_daily_revenue.toFixed(2)}/day Revenue`;
-          else metricTxt = `${bestResult.analytics.total_daily_units} units/day Volume`;
+          const bestMargin = bestResult.analytics?.financials?.projectedDailyMargin || 0;
+          const bestRev = bestResult.analytics?.financials?.projectedDailyRevenue || 0;
+          const bestUnits = bestResult.analytics?.volumeMetrics?.totalDailyUnits || 0;
+          const bestFacings = bestResult.analytics?.spaceMetrics?.totalFacings || 0;
+          const bestFill = bestResult.analytics?.spaceMetrics?.overallSpaceUtilizationPct || 0;
 
-          alertReason.innerHTML = `<strong>${bestCount} Shelves per door</strong> yields the highest objective performance for <strong>${objName}</strong> (${metricTxt}, ${bestResult.analytics.total_facings} facings, ${bestResult.analytics.overall_fill_rate_pct.toFixed(1)}% full).`;
+          if (this.currentObjective === 'profit') metricTxt = `$${bestMargin.toFixed(2)}/day Profit`;
+          else if (this.currentObjective === 'revenue') metricTxt = `$${bestRev.toFixed(2)}/day Revenue`;
+          else metricTxt = `${bestUnits} units/day Volume`;
+
+          alertReason.innerHTML = `<strong>${bestCount} Shelves per door</strong> yields the highest objective performance for <strong>${objName}</strong> (${metricTxt}, ${bestFacings} facings, ${bestFill.toFixed(1)}% full).`;
           alertBanner.style.display = 'flex';
         }
       } else {
