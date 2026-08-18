@@ -3304,6 +3304,23 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
         if (e.target.id === 'ai-copilot-modal') modal.style.display = 'none';
       });
 
+      const diffBtns = modal?.querySelectorAll('.btn-diff-filter');
+      diffBtns?.forEach(btn => {
+        btn.addEventListener('click', () => {
+          diffBtns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const diff = btn.getAttribute('data-diff');
+          const chips = modal.querySelectorAll('.ai-prompt-chip');
+          chips.forEach(chip => {
+            if (diff === 'all' || chip.getAttribute('data-diff') === diff) {
+              chip.style.display = 'inline-block';
+            } else {
+              chip.style.display = 'none';
+            }
+          });
+        });
+      });
+
       promptChips.forEach(chip => {
         chip.addEventListener('click', () => {
           const prompt = chip.getAttribute('data-prompt');
@@ -3342,6 +3359,11 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
           document.querySelectorAll('.objective-btn').forEach(btn => {
             btn.classList.toggle('active', btn.getAttribute('data-objective') === res.objective);
           });
+
+          // Apply cooler fixture if changed
+          if (res.cooler_id && res.cooler_id !== this.activeCoolerId) {
+            this.activeCoolerId = res.cooler_id;
+          }
 
           // Apply shelf count
           const cooler = this.coolerSpecs.find(c => c.cooler_id === this.activeCoolerId) || this.coolerSpecs[0];
@@ -3382,7 +3404,7 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
       agentChips.forEach(c => c.classList.add('thinking'));
       if (statusBadge) {
         statusBadge.className = 'badge-status-agent running';
-        statusBadge.textContent = 'Deliberating (5 Agents Swarm)...';
+        statusBadge.textContent = 'Deliberating (6 Agents Swarm)...';
       }
       streamContainer.innerHTML = '';
       memoContainer.innerHTML = '<div class="memo-placeholder"><span>Synthesizing agent deliberation and running physics knapsack...</span></div>';
@@ -3393,6 +3415,7 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
       let shelfCount = this.coolerSpecs[0]?.bays[0]?.shelves?.length || 5;
       let activeSkuIds = this.allSkus.map(s => s.sku_id);
       let brandOrder = [...(this.rules.brand_order || [])];
+      let targetCoolerId = this.activeCoolerId;
 
       const addTrace = (agentName, roleName, action, details, cssClass = '') => {
         const item = document.createElement('div');
@@ -3408,16 +3431,19 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
         streamContainer.scrollTop = streamContainer.scrollHeight;
       };
 
-      // Step 1: Orchestrator
+      // Step 1: Master Orchestrator Intent Decomposition
       await new Promise(r => setTimeout(r, 200));
-      if (prompt.includes('revenue') || prompt.includes('sales') || prompt.includes('traffic')) {
+      
+      // Objective detection
+      if (prompt.includes('revenue') || prompt.includes('sales') || prompt.includes('traffic') || prompt.includes('top-line')) {
         objective = 'revenue';
-      } else if (prompt.includes('volume') || prompt.includes('units') || prompt.includes('velocity')) {
+      } else if (prompt.includes('volume') || prompt.includes('units') || prompt.includes('velocity') || prompt.includes('throughput')) {
         objective = 'volume';
-      } else if (prompt.includes('profit') || prompt.includes('margin')) {
+      } else if (prompt.includes('profit') || prompt.includes('margin') || prompt.includes('gross margin')) {
         objective = 'profit';
       }
 
+      // Shelf count detection
       const shelfMatch = prompt.match(/(\d+)\s*shelves/);
       if (shelfMatch) {
         shelfCount = Math.max(3, Math.min(15, parseInt(shelfMatch[1], 10)));
@@ -3425,21 +3451,149 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
         shelfCount = 5;
       }
 
-      if (prompt.includes('no 1.5l') || prompt.includes('exclude 1.5l') || prompt.includes('cans only')) {
-        activeSkuIds = this.allSkus.filter(s => s.pack_size_label !== '1.5L').map(s => s.sku_id);
-      }
-      if (prompt.includes('zero sugar') || prompt.includes('diet') || prompt.includes('health')) {
-        activeSkuIds = this.allSkus.filter(s => ['Zero Sugar', 'Diet', 'No Added Sugar'].includes(s.sugar_type)).map(s => s.sku_id);
+      // Cooler Fixture detection
+      if (prompt.includes('1-door') || prompt.includes('single door') || prompt.includes('compact cooler')) {
+        targetCoolerId = 'COOLER-1DOOR-COMPACT';
+      } else if (prompt.includes('3-door') || prompt.includes('mega cooler') || prompt.includes('hypermarket')) {
+        targetCoolerId = 'COOLER-3DOOR-MEGA';
       }
 
-      addTrace('🎯 Orchestrator Agent', 'Category Director', 'Intent Decomposition', `Deconstructed brief: Goal = <strong>${objective.toUpperCase()}</strong>, Target = <strong>${shelfCount} Shelves</strong>, Active Assortment = <strong>${activeSkuIds.length} SKUs</strong>.`);
+      // 1. Specific SKU / Brand Inclusions / Exclusions
+      if (prompt.includes('exclude pepsi 1.5l') || prompt.includes('no pepsi 1.5l') || prompt.includes('remove pepsi 1.5l')) {
+        activeSkuIds = activeSkuIds.filter(id => id !== 'SKU-PEP-1500');
+      } else if (prompt.includes('no 1.5l') || prompt.includes('exclude 1.5l') || prompt.includes('without 1.5l') || prompt.includes('no 1500ml') || prompt.includes('exclude 1500ml') || prompt.includes('no large bottles') || prompt.includes('exclude large bottles') || prompt.includes('cans only') || prompt.includes('only cans') || prompt.includes('single-serve only') || prompt.includes('single serve only') || prompt.includes('grab and go') || prompt.includes('grab & go')) {
+        activeSkuIds = activeSkuIds.filter(id => {
+          const s = this.allSkus.find(x => x.sku_id === id);
+          return s && s.pack_size_label !== '1.5L';
+        });
+      }
+
+      if (prompt.includes('exclude pepsi') || prompt.includes('no pepsi')) {
+        activeSkuIds = activeSkuIds.filter(id => {
+          const s = this.allSkus.find(x => x.sku_id === id);
+          return s && s.brand !== 'Pepsi';
+        });
+      }
+
+      if (prompt.includes('exclude dr pepper') || prompt.includes('no dr pepper')) {
+        activeSkuIds = activeSkuIds.filter(id => {
+          const s = this.allSkus.find(x => x.sku_id === id);
+          return s && s.brand !== 'Dr Pepper';
+        });
+      }
+
+      // Exclude 500ml
+      if (prompt.includes('no 500ml') || prompt.includes('exclude 500ml') || prompt.includes('without 500ml') || prompt.includes('exclude all 500ml')) {
+        activeSkuIds = activeSkuIds.filter(id => {
+          const s = this.allSkus.find(x => x.sku_id === id);
+          return s && s.pack_size_label !== '500ml';
+        });
+      }
+
+      // Exclude 250ml
+      if (prompt.includes('no 250ml') || prompt.includes('exclude 250ml') || prompt.includes('without 250ml') || prompt.includes('no slim cans') || prompt.includes('exclude slim cans')) {
+        activeSkuIds = activeSkuIds.filter(id => {
+          const s = this.allSkus.find(x => x.sku_id === id);
+          return s && s.pack_size_label !== '250ml';
+        });
+      }
+
+      // Exclude 330ml
+      if (prompt.includes('no 330ml') || prompt.includes('exclude 330ml') || prompt.includes('without 330ml')) {
+        activeSkuIds = activeSkuIds.filter(id => {
+          const s = this.allSkus.find(x => x.sku_id === id);
+          return s && s.pack_size_label !== '330ml';
+        });
+      }
+
+      // Pack type: Cans only
+      if (prompt.includes('cans only') || prompt.includes('only cans') || prompt.includes('no bottles') || prompt.includes('exclude bottles') || prompt.includes('no pet') || prompt.includes('exclude pet') || prompt.includes('exclude all pet')) {
+        activeSkuIds = activeSkuIds.filter(id => {
+          const s = this.allSkus.find(x => x.sku_id === id);
+          return s && s.pack_type === 'Can';
+        });
+      }
+
+      // Pack type: Bottles only
+      if (prompt.includes('bottles only') || prompt.includes('only bottles') || prompt.includes('no cans') || prompt.includes('exclude cans')) {
+        activeSkuIds = activeSkuIds.filter(id => {
+          const s = this.allSkus.find(x => x.sku_id === id);
+          return s && (s.pack_type === 'Bottle' || s.pack_type === 'PET');
+        });
+      }
+
+      // Pack size: Only 250ml
+      if (prompt.includes('only 250ml') || prompt.includes('250ml only') || prompt.includes('just 250ml')) {
+        activeSkuIds = activeSkuIds.filter(id => {
+          const s = this.allSkus.find(x => x.sku_id === id);
+          return s && s.pack_size_label === '250ml';
+        });
+      }
+
+      // Pack size: Only 330ml
+      if (prompt.includes('only 330ml') || prompt.includes('330ml only') || prompt.includes('just 330ml')) {
+        activeSkuIds = activeSkuIds.filter(id => {
+          const s = this.allSkus.find(x => x.sku_id === id);
+          return s && s.pack_size_label === '330ml';
+        });
+      }
+
+      // Pack size: Only 500ml
+      if (prompt.includes('only 500ml') || prompt.includes('500ml only') || prompt.includes('just 500ml')) {
+        activeSkuIds = activeSkuIds.filter(id => {
+          const s = this.allSkus.find(x => x.sku_id === id);
+          return s && s.pack_size_label === '500ml';
+        });
+      }
+
+      // Sugar filter
+      if (prompt.includes('zero sugar') || prompt.includes('diet only') || prompt.includes('no sugar') || prompt.includes('sugar free') || prompt.includes('health-conscious') || prompt.includes('drop high-sugar') || prompt.includes('eliminate high-sugar')) {
+        activeSkuIds = activeSkuIds.filter(id => {
+          const s = this.allSkus.find(x => x.sku_id === id);
+          return s && ['Zero Sugar', 'Diet', 'No Added Sugar'].includes(s.sugar_type);
+        });
+      }
+
+      // Category filters
+      if (prompt.includes('energy only') || prompt.includes('only energy')) {
+        activeSkuIds = activeSkuIds.filter(id => {
+          const s = this.allSkus.find(x => x.sku_id === id);
+          return s && s.category === 'Energy';
+        });
+      } else if (prompt.includes('csd only') || prompt.includes('soda only') || prompt.includes('only sodas')) {
+        activeSkuIds = activeSkuIds.filter(id => {
+          const s = this.allSkus.find(x => x.sku_id === id);
+          return s && s.category === 'CSD';
+        });
+      }
+
+      // High margin filter
+      if (prompt.includes('high margin') || prompt.includes('margin >') || prompt.includes('margin above')) {
+        activeSkuIds = activeSkuIds.filter(id => {
+          const s = this.allSkus.find(x => x.sku_id === id);
+          return s && s.margin >= 1.25;
+        });
+      }
+
+      // Eliminate slow movers (<22 u/d)
+      if (prompt.includes('eliminate slow movers') || prompt.includes('no slow movers')) {
+        activeSkuIds = activeSkuIds.filter(id => {
+          const s = this.allSkus.find(x => x.sku_id === id);
+          return s && s.sales_velocity_units_day >= 22;
+        });
+      }
+
+      // Safety fallback
+      if (activeSkuIds.length === 0) activeSkuIds = this.allSkus.map(s => s.sku_id);
+
+      addTrace('🎯 Orchestrator Agent', 'Category Director', 'Intent Decomposition', `Deconstructed brief: Goal = <strong>${objective.toUpperCase()}</strong>, Target = <strong>${shelfCount} Shelves</strong> on <strong>${targetCoolerId}</strong>, Filtered Assortment = <strong>${activeSkuIds.length} SKUs</strong>.`);
 
       // Step 2: Strategist
       await new Promise(r => setTimeout(r, 250));
       if (prompt.includes('energy') || prompt.includes('monster') || prompt.includes('red bull')) {
         brandOrder = ['Monster Energy', 'Red Bull', ...brandOrder.filter(b => !['Monster Energy', 'Red Bull'].includes(b))];
         addTrace('📊 Category Strategist', 'Consumer Demand', 'Brand Flow Adjustment', 'Elevated Monster Energy and Red Bull into top eye-level reach zone to capture high-velocity impulse sales.');
-      } else if (prompt.includes('coca-cola') || prompt.includes('coke') || prompt.includes('core')) {
+      } else if (prompt.includes('coca-cola') || prompt.includes('coke') || prompt.includes('core dominance')) {
         brandOrder = ['Coca-Cola', 'Diet Coke', 'Sprite', 'Fanta', ...brandOrder.filter(b => !['Coca-Cola', 'Diet Coke', 'Sprite', 'Fanta'].includes(b))];
         addTrace('📊 Category Strategist', 'Flagship Focus', 'Brand Flow Adjustment', 'Anchored Coca-Cola core flagship portfolio on Door 1 eye-level golden zone.');
       } else {
@@ -3448,7 +3602,7 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
 
       // Step 3: Mathematical Solver
       await new Promise(r => setTimeout(r, 300));
-      const testCooler = JSON.parse(JSON.stringify(this.coolerSpecs.find(c => c.cooler_id === this.activeCoolerId) || this.coolerSpecs[0]));
+      const testCooler = JSON.parse(JSON.stringify(this.coolerSpecs.find(c => c.cooler_id === targetCoolerId) || this.coolerSpecs[0]));
       this.changeCoolerShelfCount(testCooler, shelfCount);
       const testRules = JSON.parse(JSON.stringify(this.rules));
       testRules.brand_order = brandOrder;
@@ -3457,7 +3611,7 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
       const optimizer = new PlanogramOptimizer(activeSkusList, [testCooler], testRules, objective);
       const solveRes = optimizer.optimize(testCooler.cooler_id);
 
-      addTrace('⚙️ Knapsack Solver', 'Space Optimization', 'Integer Knapsack Allocation', `Solved ${shelfCount} shelves across ${testCooler.doors} door(s). Allocated <strong>${solveRes.analytics.spaceMetrics.totalFacings} total facings</strong> with 0% width overflow.`, 'solver');
+      addTrace('⚙️ Knapsack Solver', 'Space Optimization', 'Integer Knapsack Allocation', `Solved ${shelfCount} shelves across ${testCooler.doors} door(s) on ${testCooler.name}. Allocated <strong>${solveRes.analytics.spaceMetrics.totalFacings} total facings</strong> with 0% width overflow.`, 'solver');
 
       // Step 4: Compliance Auditor
       await new Promise(r => setTimeout(r, 200));
@@ -3478,10 +3632,12 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
       }
 
       // Step 5: Trade-off Critic
-      await new Promise(r => setTimeout(r, 200));
+      await new Promise(r => setTimeout(r, 250));
       const dailyMargin = solveRes.analytics.financials.projectedDailyMargin;
       const dailyRev = solveRes.analytics.financials.projectedDailyRevenue;
-      addTrace('🔍 Trade-off Critic', 'Consensus Gatekeeper', 'Economic Viability', `Approved consensus candidate. Projected Margin: <strong>$${dailyMargin.toFixed(2)}/day</strong>, Space Full: <strong>${solveRes.analytics.spaceMetrics.overallSpaceUtilizationPct.toFixed(1)}%</strong>.`, 'critic');
+      const fillRate = solveRes.analytics.spaceMetrics.overallSpaceUtilizationPct;
+
+      addTrace('🔍 Trade-off Critic', 'Economics Review', 'Feasibility Approval', `Evaluated economics: <strong>$${dailyMargin.toFixed(2)}/day margin</strong>, <strong>$${dailyRev.toFixed(2)}/day revenue</strong>, <strong>${fillRate.toFixed(1)}% fill rate</strong>. Consensus approved.`, 'critic');
 
       // Step 6: Executive Reporter
       await new Promise(r => setTimeout(r, 200));
@@ -3494,6 +3650,7 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
       this.latestAiSwarmResult = {
         objective,
         shelf_count: shelfCount,
+        cooler_id: targetCoolerId,
         active_sku_ids: activeSkuIds,
         brand_order: brandOrder,
         planogramResult: solveRes

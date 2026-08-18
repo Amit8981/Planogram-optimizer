@@ -3715,9 +3715,12 @@ tr.sku-row-must_have {
 
 .ai-quick-prompts-container {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  flex-direction: column;
   gap: 0.45rem;
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 0.85rem;
 }
 
 .quick-prompts-label {
@@ -3726,16 +3729,35 @@ tr.sku-row-must_have {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-muted);
-  margin-right: 0.25rem;
+}
+
+.btn-diff-filter {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-diff-filter.active,
+.btn-diff-filter:hover {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: var(--accent-cyan);
+  color: #FFFFFF;
 }
 
 .ai-prompt-chip {
-  background: var(--bg-surface-2);
+  background: var(--bg-surface-1);
   border: 1px solid var(--border-subtle);
   color: var(--text-primary);
-  font-size: 0.75rem;
-  padding: 0.35rem 0.7rem;
-  border-radius: var(--radius-md);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.28rem 0.55rem;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all var(--transition-fast);
   white-space: nowrap;

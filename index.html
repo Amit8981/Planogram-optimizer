@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260818_9">
+  <link rel="stylesheet" href="styles.css?v=20260818_10">
 </head>
 <body>
 
@@ -739,6 +739,7 @@
       <div class="modal-body user-guide-body">
         <div class="guide-nav-bar">
           <button type="button" class="guide-nav-btn active" data-target="guide-tab-workflow">🚀 4-Step Workflow</button>
+          <button type="button" class="guide-nav-btn" data-target="guide-tab-agents">🤖 AI Agents & 15 Prompts</button>
           <button type="button" class="guide-nav-btn" data-target="guide-tab-priorities">⭐ Assortment Priorities</button>
           <button type="button" class="guide-nav-btn" data-target="guide-tab-coolers">❄️ Coolers & Shelves</button>
           <button type="button" class="guide-nav-btn" data-target="guide-tab-rules">📐 Merchandising Rules</button>
@@ -770,6 +771,150 @@
                 <h4>Choose Goal & Run Solver</h4>
                 <p>Pick an optimization goal (<strong>Profit</strong>, <strong>Revenue</strong>, or <strong>Volume</strong>) and hit <strong class="text-cyan">🚀 RUN SOLVER</strong> to generate an optimal planogram with 0% width overflow!</p>
               </div>
+            </div>
+          </div>
+
+          <!-- Guide Tab: AI Agents & 15 Curated Test Prompts -->
+          <div class="guide-tab-pane" id="guide-tab-agents">
+            <h3 class="guide-heading">🤖 PlanogramAI Multi-Agent Swarm & 15 Curated Test Prompts</h3>
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">
+              The AI Copilot uses a <strong>LangGraph Multi-Agent Architecture</strong> where 6 specialized agent personas deliberate, audit supplier contracts, and execute exact bounded knapsack space allocations.
+            </p>
+
+            <div class="guide-card-grid mb-4">
+              <div class="guide-feature-box">
+                <h4>🎯 6 Specialized Autonomous Agents</h4>
+                <ul style="font-size: 0.75rem;">
+                  <li><strong>🎯 Master Orchestrator</strong>: Intent parsing, goal extraction, and constraint formulation.</li>
+                  <li><strong>📊 Category Strategist</strong>: Dynamic brand sequencing, category flow, and eye-level prioritization.</li>
+                  <li><strong>⚙️ Mathematical Solver</strong>: Exact bounded Integer Knapsack physics engine (0% width overflow).</li>
+                  <li><strong>🛡️ Compliance Auditor</strong>: Manufacturer share-of-shelf contracts (Coca-Cola $\ge 30\%$) and fixture safety.</li>
+                  <li><strong>🔍 Trade-off Critic</strong>: Evaluates gross margin density and stockout buffer before granting approval.</li>
+                  <li><strong>📝 Executive Reporter</strong>: Synthesizes executive advisory memos with financial KPI impact.</li>
+                </ul>
+              </div>
+              <div class="guide-feature-box">
+                <h4>🧠 Pack Size & Assortment Capabilities</h4>
+                <ul style="font-size: 0.75rem;">
+                  <li><strong>Pack Exclusions</strong>: <em>"Exclude 1.5L bottles"</em>, <em>"No 500ml"</em>, <em>"No 250ml slim cans"</em>.</li>
+                  <li><strong>Pack Inclusions</strong>: <em>"Only 330ml cans"</em>, <em>"Cans only"</em>, <em>"Bottles only"</em>, <em>"Single-serve only"</em>.</li>
+                  <li><strong>Brand Exclusions</strong>: <em>"Exclude Pepsi 1.5L"</em>, <em>"No Dr Pepper"</em>.</li>
+                  <li><strong>Health & Diet</strong>: <em>"Zero Sugar only"</em>, <em>"Health & hydration focus"</em>.</li>
+                  <li><strong>Fixture & Shelves</strong>: <em>"on 6 shelves"</em>, <em>"on 1-Door compact cooler"</em>, <em>"on 3-Door Mega Cooler"</em>.</li>
+                </ul>
+              </div>
+            </div>
+
+            <h4 style="color: var(--accent-cyan); font-size: 0.88rem; margin: 1rem 0 0.5rem;">📋 15 Tested Natural Language Prompts (Easy ➔ Moderate ➔ Hard):</h4>
+
+            <div class="guide-table-wrap">
+              <table class="guide-table">
+                <thead>
+                  <tr>
+                    <th>Level</th>
+                    <th>Scenario & Strategic Intent</th>
+                    <th>Prompt Text (Click to Copy)</th>
+                    <th style="text-align: center;">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- EASY (1-5) -->
+                  <tr>
+                    <td><span class="badge-guaranteed" style="background: rgba(16, 185, 129, 0.2); color: #10B981;">🟢 Easy</span></td>
+                    <td><strong>Profit Maximizer</strong> (5 Shelves default)</td>
+                    <td><code>Optimize for maximum gross profit on standard 5 shelves</code></td>
+                    <td style="text-align: center;"><button type="button" class="btn-step-small" onclick="window.app && window.app.runAiQuickCommand('Optimize for maximum gross profit on standard 5 shelves')">⚡ Run</button></td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge-guaranteed" style="background: rgba(16, 185, 129, 0.2); color: #10B981;">🟢 Easy</span></td>
+                    <td><strong>Volume Throughput</strong> (Fast movers)</td>
+                    <td><code>Maximize unit volume throughput and daily sales velocity across all doors</code></td>
+                    <td style="text-align: center;"><button type="button" class="btn-step-small" onclick="window.app && window.app.runAiQuickCommand('Maximize unit volume throughput and daily sales velocity across all doors')">⚡ Run</button></td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge-guaranteed" style="background: rgba(16, 185, 129, 0.2); color: #10B981;">🟢 Easy</span></td>
+                    <td><strong>Zero Sugar & Health</strong> (No regular sugar)</td>
+                    <td><code>Focus solely on Zero Sugar and Diet beverages for health-conscious shoppers</code></td>
+                    <td style="text-align: center;"><button type="button" class="btn-step-small" onclick="window.app && window.app.runAiQuickCommand('Focus solely on Zero Sugar and Diet beverages for health-conscious shoppers')">⚡ Run</button></td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge-guaranteed" style="background: rgba(16, 185, 129, 0.2); color: #10B981;">🟢 Easy</span></td>
+                    <td><strong>No Large Bottles</strong> (Exclude 1.5L)</td>
+                    <td><code>Exclude all 1.5L large bottles and pack grab-and-go cans densely</code></td>
+                    <td style="text-align: center;"><button type="button" class="btn-step-small" onclick="window.app && window.app.runAiQuickCommand('Exclude all 1.5L large bottles and pack grab-and-go cans densely')">⚡ Run</button></td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge-guaranteed" style="background: rgba(16, 185, 129, 0.2); color: #10B981;">🟢 Easy</span></td>
+                    <td><strong>Top-Line Revenue</strong> (6 Shelves)</td>
+                    <td><code>Set cooler fixture to 6 shelves with revenue maximization objective</code></td>
+                    <td style="text-align: center;"><button type="button" class="btn-step-small" onclick="window.app && window.app.runAiQuickCommand('Set cooler fixture to 6 shelves with revenue maximization objective')">⚡ Run</button></td>
+                  </tr>
+
+                  <!-- MODERATE (6-10) -->
+                  <tr>
+                    <td><span class="badge-guaranteed" style="background: rgba(245, 158, 11, 0.2); color: #F59E0B;">🟡 Moderate</span></td>
+                    <td><strong>Summer Energy Rush</strong> (Monster & Red Bull)</td>
+                    <td><code>Summer Promo: Maximize Energy Drinks (Monster & Red Bull) on 6 shelves, placing them in eye-level reach</code></td>
+                    <td style="text-align: center;"><button type="button" class="btn-step-small" onclick="window.app && window.app.runAiQuickCommand('Summer Promo: Maximize Energy Drinks (Monster & Red Bull) on 6 shelves, placing them in eye-level reach')">⚡ Run</button></td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge-guaranteed" style="background: rgba(245, 158, 11, 0.2); color: #F59E0B;">🟡 Moderate</span></td>
+                    <td><strong>Cans Only Rush</strong> (No 500ml / No 1.5L)</td>
+                    <td><code>Cans Only: Exclude all 500ml and 1.5L bottles, optimize 250ml and 330ml cans for top profit margin</code></td>
+                    <td style="text-align: center;"><button type="button" class="btn-step-small" onclick="window.app && window.app.runAiQuickCommand('Cans Only: Exclude all 500ml and 1.5L bottles, optimize 250ml and 330ml cans for top profit margin')">⚡ Run</button></td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge-guaranteed" style="background: rgba(245, 158, 11, 0.2); color: #F59E0B;">🟡 Moderate</span></td>
+                    <td><strong>Flagship Core Dominance</strong> (Door 1 Priority)</td>
+                    <td><code>Anchor Coca-Cola and Pepsi on Door 1 eye-level, allocate 250ml slim cans on top shelf on 5 shelves</code></td>
+                    <td style="text-align: center;"><button type="button" class="btn-step-small" onclick="window.app && window.app.runAiQuickCommand('Anchor Coca-Cola and Pepsi on Door 1 eye-level, allocate 250ml slim cans on top shelf on 5 shelves')">⚡ Run</button></td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge-guaranteed" style="background: rgba(245, 158, 11, 0.2); color: #F59E0B;">🟡 Moderate</span></td>
+                    <td><strong>Health & Hydration</strong> (Juice & Waters)</td>
+                    <td><code>Drop high-sugar CSDs, retain only Zero Sugar, Diet, Innocent Juice, and Evian Water with volume focus</code></td>
+                    <td style="text-align: center;"><button type="button" class="btn-step-small" onclick="window.app && window.app.runAiQuickCommand('Drop high-sugar CSDs, retain only Zero Sugar, Diet, Innocent Juice, and Evian Water with volume focus')">⚡ Run</button></td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge-guaranteed" style="background: rgba(245, 158, 11, 0.2); color: #F59E0B;">🟡 Moderate</span></td>
+                    <td><strong>Impulse C-Store Layout</strong> (7 Shelves)</td>
+                    <td><code>Prioritize high-velocity single-serve items (250ml, 330ml, 500ml) on 7 shelves maximizing gross revenue</code></td>
+                    <td style="text-align: center;"><button type="button" class="btn-step-small" onclick="window.app && window.app.runAiQuickCommand('Prioritize high-velocity single-serve items (250ml, 330ml, 500ml) on 7 shelves maximizing gross revenue')">⚡ Run</button></td>
+                  </tr>
+
+                  <!-- HARD (11-15) -->
+                  <tr>
+                    <td><span class="badge-guaranteed" style="background: rgba(239, 68, 68, 0.2); color: #EF4444;">🔴 Hard</span></td>
+                    <td><strong>Multi-Brand Exclusions & Base Anchor</strong></td>
+                    <td><code>Heatwave Promo: Exclude Pepsi 1.5L and Dr Pepper, mandate Coca-Cola 1.5L on bottom shelf, place Monster Mega 500ml on Door 2 eye-level with 6 shelves maximizing Profit</code></td>
+                    <td style="text-align: center;"><button type="button" class="btn-step-small" onclick="window.app && window.app.runAiQuickCommand('Heatwave Promo: Exclude Pepsi 1.5L and Dr Pepper, mandate Coca-Cola 1.5L on bottom shelf, place Monster Mega 500ml on Door 2 eye-level with 6 shelves maximizing Profit')">⚡ Run</button></td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge-guaranteed" style="background: rgba(239, 68, 68, 0.2); color: #EF4444;">🔴 Hard</span></td>
+                    <td><strong>Micro-Market 1-Door Fixture</strong></td>
+                    <td><code>Configure 1-Door Compact Cooler with 4 shelves, exclude all 1.5L bottles, allocate Red Bull 250ml and Coke 330ml with 3.5+ days of supply</code></td>
+                    <td style="text-align: center;"><button type="button" class="btn-step-small" onclick="window.app && window.app.runAiQuickCommand('Configure 1-Door Compact Cooler with 4 shelves, exclude all 1.5L bottles, allocate Red Bull 250ml and Coke 330ml with 3.5+ days of supply')">⚡ Run</button></td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge-guaranteed" style="background: rgba(239, 68, 68, 0.2); color: #EF4444;">🔴 Hard</span></td>
+                    <td><strong>Hypermarket 3-Door Mega Fixture</strong></td>
+                    <td><code>Maximize Profit on 3-Door Mega Cooler across 6 shelves, separating Energy drinks to Door 3, CSD core to Door 1, and Water/Juice to Door 2 with 0% overflow</code></td>
+                    <td style="text-align: center;"><button type="button" class="btn-step-small" onclick="window.app && window.app.runAiQuickCommand('Maximize Profit on 3-Door Mega Cooler across 6 shelves, separating Energy drinks to Door 3, CSD core to Door 1, and Water/Juice to Door 2 with 0% overflow')">⚡ Run</button></td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge-guaranteed" style="background: rgba(239, 68, 68, 0.2); color: #EF4444;">🔴 Hard</span></td>
+                    <td><strong>High-Margin Premium Yield</strong> ($1.40+ Margin)</td>
+                    <td><code>High margin focus: Prioritize SKUs with gross margin > $1.40 (Innocent, Monster, Red Bull), eliminate slow movers (<22 u/d), on 5 shelves</code></td>
+                    <td style="text-align: center;"><button type="button" class="btn-step-small" onclick="window.app && window.app.runAiQuickCommand('High margin focus: Prioritize SKUs with gross margin > $1.40 (Innocent, Monster, Red Bull), eliminate slow movers (<22 u/d), on 5 shelves')">⚡ Run</button></td>
+                  </tr>
+                  <tr>
+                    <td><span class="badge-guaranteed" style="background: rgba(239, 68, 68, 0.2); color: #EF4444;">🔴 Hard</span></td>
+                    <td><strong>Strict Single-Serve 8-Shelf Layout</strong></td>
+                    <td><code>Single-Serve Only: Exclude all 500ml and 1.5L bottles, configure 8 compact shelves, prioritize high-velocity 250ml and 330ml cans with 100% contract compliance</code></td>
+                    <td style="text-align: center;"><button type="button" class="btn-step-small" onclick="window.app && window.app.runAiQuickCommand('Single-Serve Only: Exclude all 500ml and 1.5L bottles, configure 8 compact shelves, prioritize high-velocity 250ml and 330ml cans with 100% contract compliance')">⚡ Run</button></td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -998,14 +1143,40 @@
           </div>
         </div>
 
-        <!-- Quick Strategy Prompt Suggestions -->
+        <!-- Quick Strategy Prompt Suggestions with Difficulty Filters -->
         <div class="ai-quick-prompts-container">
-          <span class="quick-prompts-label">Quick Prompts:</span>
-          <button class="ai-prompt-chip" data-prompt="Summer Heatwave: Maximize Energy Drinks (Monster & Red Bull) for Profit on 6 shelves">⚡ Summer Energy Rush</button>
-          <button class="ai-prompt-chip" data-prompt="Core Dominance: Focus on Coca-Cola & Pepsi with zero width overflow on 5 shelves">🥤 Flagship Core Focus</button>
-          <button class="ai-prompt-chip" data-prompt="Healthy & Wellness: Promote Zero-Sugar, Juices & Plant Milk with high margin">🍃 Health & Zero Sugar</button>
-          <button class="ai-prompt-chip" data-prompt="No 1.5L Bottles: Exclude all large bottles and pack grab-and-go cans densely">🚫 Cans Only (No 1.5L)</button>
-          <button class="ai-prompt-chip" data-prompt="Find AI Optimal Shelves: Evaluate 3 to 15 shelves and select highest margin configuration">💡 AI Auto-Config</button>
+          <div class="quick-prompts-header-row" style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 0.35rem;">
+            <span class="quick-prompts-label">🎯 15 Test Prompt Presets:</span>
+            <div class="prompt-difficulty-filter" style="display: flex; gap: 0.25rem;">
+              <button type="button" class="btn-diff-filter active" data-diff="all">All (15)</button>
+              <button type="button" class="btn-diff-filter" data-diff="easy" style="color: #10B981;">🟢 Easy</button>
+              <button type="button" class="btn-diff-filter" data-diff="moderate" style="color: #F59E0B;">🟡 Moderate</button>
+              <button type="button" class="btn-diff-filter" data-diff="hard" style="color: #EF4444;">🔴 Hard</button>
+            </div>
+          </div>
+
+          <div class="ai-prompts-scroll-wrap" style="display: flex; flex-wrap: wrap; gap: 0.35rem; max-height: 110px; overflow-y: auto;">
+            <!-- Easy -->
+            <button class="ai-prompt-chip" data-diff="easy" data-prompt="Optimize for maximum gross profit on standard 5 shelves">🟢 Profit Max (5 Shelves)</button>
+            <button class="ai-prompt-chip" data-diff="easy" data-prompt="Maximize unit volume throughput and daily sales velocity across all doors">🟢 Volume Throughput</button>
+            <button class="ai-prompt-chip" data-diff="easy" data-prompt="Focus solely on Zero Sugar and Diet beverages for health-conscious shoppers">🟢 Zero Sugar & Diet</button>
+            <button class="ai-prompt-chip" data-diff="easy" data-prompt="Exclude all 1.5L large bottles and pack grab-and-go cans densely">🟢 No 1.5L Bottles</button>
+            <button class="ai-prompt-chip" data-diff="easy" data-prompt="Set cooler fixture to 6 shelves with revenue maximization objective">🟢 Revenue Max (6 Shelves)</button>
+            
+            <!-- Moderate -->
+            <button class="ai-prompt-chip" data-diff="moderate" data-prompt="Summer Promo: Maximize Energy Drinks (Monster & Red Bull) on 6 shelves, placing them in eye-level reach">🟡 Summer Energy Rush (6 Shelves)</button>
+            <button class="ai-prompt-chip" data-diff="moderate" data-prompt="Cans Only: Exclude all 500ml and 1.5L bottles, optimize 250ml and 330ml cans for top profit margin">🟡 Cans Only (No Bottles)</button>
+            <button class="ai-prompt-chip" data-diff="moderate" data-prompt="Anchor Coca-Cola and Pepsi on Door 1 eye-level, allocate 250ml slim cans on top shelf on 5 shelves">🟡 Flagship Core Focus</button>
+            <button class="ai-prompt-chip" data-diff="moderate" data-prompt="Drop high-sugar CSDs, retain only Zero Sugar, Diet, Innocent Juice, and Evian Water with volume focus">🟡 Health & Hydration</button>
+            <button class="ai-prompt-chip" data-diff="moderate" data-prompt="Prioritize high-velocity single-serve items (250ml, 330ml, 500ml) on 7 shelves maximizing gross revenue">🟡 Impulse C-Store (7 Shelves)</button>
+
+            <!-- Hard -->
+            <button class="ai-prompt-chip" data-diff="hard" data-prompt="Heatwave Promo: Exclude Pepsi 1.5L and Dr Pepper, mandate Coca-Cola 1.5L on bottom shelf, place Monster Mega 500ml on Door 2 eye-level with 6 shelves maximizing Profit">🔴 Heatwave Exclusions (6 Shelves)</button>
+            <button class="ai-prompt-chip" data-diff="hard" data-prompt="Configure 1-Door Compact Cooler with 4 shelves, exclude all 1.5L bottles, allocate Red Bull 250ml and Coke 330ml with 3.5+ days of supply">🔴 1-Door Compact (4 Shelves)</button>
+            <button class="ai-prompt-chip" data-diff="hard" data-prompt="Maximize Profit on 3-Door Mega Cooler across 6 shelves, separating Energy drinks to Door 3, CSD core to Door 1, and Water/Juice to Door 2 with 0% overflow">🔴 3-Door Mega Cooler (6 Shelves)</button>
+            <button class="ai-prompt-chip" data-diff="hard" data-prompt="High margin focus: Prioritize SKUs with gross margin > $1.40 (Innocent, Monster, Red Bull), eliminate slow movers (<22 u/d), on 5 shelves">🔴 Premium Margin ($1.40+)</button>
+            <button class="ai-prompt-chip" data-diff="hard" data-prompt="Single-Serve Only: Exclude all 500ml and 1.5L bottles, configure 8 compact shelves, prioritize high-velocity 250ml and 330ml cans with 100% contract compliance">🔴 8-Shelf Cans Density</button>
+          </div>
         </div>
 
         <!-- Prompt Input Area -->
@@ -1112,7 +1283,7 @@
   </div>
 
   <!-- Standalone Bundled Script -->
-  <script src="app.bundle.js?v=20260818_9"></script>
+  <script src="app.bundle.js?v=20260818_10"></script>
   <script>
     // Tab switching for sidebar
     document.querySelectorAll('.side-tab').forEach(tab => {

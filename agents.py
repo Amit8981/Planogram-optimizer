@@ -119,16 +119,74 @@ def orchestrator_agent(state: PlanogramAgentState, all_skus: List[Dict[str, Any]
     elif any(k in prompt for k in ["profit", "margin", "bottomline"]):
         objective = "profit"
 
+    # Fixture detection
+    if "1-door" in prompt or "single door" in prompt or "compact cooler" in prompt:
+        cooler_id = "COOLER-1DOOR-COMPACT"
+    elif "3-door" in prompt or "mega cooler" in prompt or "hypermarket" in prompt:
+        cooler_id = "COOLER-3DOOR-MEGA"
+
     # Shelf count detection
     shelf_match = re.search(r"(\d+)\s*shelves", prompt)
     if shelf_match:
         shelf_count = max(3, min(15, int(shelf_match.group(1))))
 
-    # Exclusions & Category Focus
-    if "no 1.5l" in prompt or "exclude 1.5l" in prompt or "remove large bottles" in prompt:
+    # 1. Pack Size Inclusions / Exclusions
+    if any(k in prompt for k in ["no 1.5l", "exclude 1.5l", "without 1.5l", "no 1500ml", "no large bottles", "exclude large bottles", "cans only", "only cans", "single-serve only", "grab and go"]):
         active_sku_ids = [s["sku_id"] for s in all_skus if s["pack_size_label"] != "1.5L" and s["sku_id"] in active_sku_ids]
-    if "no sugar" in prompt or "zero sugar only" in prompt or "diet only" in prompt:
+
+    if any(k in prompt for k in ["no 500ml", "exclude 500ml", "without 500ml"]):
+        active_sku_ids = [s["sku_id"] for s in all_skus if s["pack_size_label"] != "500ml" and s["sku_id"] in active_sku_ids]
+
+    if any(k in prompt for k in ["no 250ml", "exclude 250ml", "without 250ml", "no slim cans"]):
+        active_sku_ids = [s["sku_id"] for s in all_skus if s["pack_size_label"] != "250ml" and s["sku_id"] in active_sku_ids]
+
+    if any(k in prompt for k in ["no 330ml", "exclude 330ml", "without 330ml"]):
+        active_sku_ids = [s["sku_id"] for s in all_skus if s["pack_size_label"] != "330ml" and s["sku_id"] in active_sku_ids]
+
+    if any(k in prompt for k in ["cans only", "only cans", "no bottles", "exclude bottles", "no pet", "exclude pet"]):
+        active_sku_ids = [s["sku_id"] for s in all_skus if s.get("pack_type") == "Can" and s["sku_id"] in active_sku_ids]
+
+    if any(k in prompt for k in ["bottles only", "only bottles", "no cans", "exclude cans"]):
+        active_sku_ids = [s["sku_id"] for s in all_skus if s.get("pack_type") in ["Bottle", "PET"] and s["sku_id"] in active_sku_ids]
+
+    # Specific Pack Size selections
+    if any(k in prompt for k in ["only 250ml", "250ml only", "just 250ml"]):
+        active_sku_ids = [s["sku_id"] for s in all_skus if s["pack_size_label"] == "250ml" and s["sku_id"] in active_sku_ids]
+
+    if any(k in prompt for k in ["only 330ml", "330ml only", "just 330ml"]):
+        active_sku_ids = [s["sku_id"] for s in all_skus if s["pack_size_label"] == "330ml" and s["sku_id"] in active_sku_ids]
+
+    if any(k in prompt for k in ["only 500ml", "500ml only", "just 500ml"]):
+        active_sku_ids = [s["sku_id"] for s in all_skus if s["pack_size_label"] == "500ml" and s["sku_id"] in active_sku_ids]
+
+    # 2. Specific Brand / SKU Inclusions & Exclusions
+    if "exclude pepsi 1.5l" in prompt or "no pepsi 1.5l" in prompt:
+        active_sku_ids = [sid for sid in active_sku_ids if sid != "SKU-PEP-1500"]
+    elif "exclude pepsi" in prompt or "no pepsi" in prompt:
+        active_sku_ids = [s["sku_id"] for s in all_skus if s.get("brand") != "Pepsi" and s["sku_id"] in active_sku_ids]
+
+    if "exclude dr pepper" in prompt or "no dr pepper" in prompt:
+        active_sku_ids = [s["sku_id"] for s in all_skus if s.get("brand") != "Dr Pepper" and s["sku_id"] in active_sku_ids]
+
+    # Sugar filter
+    if any(k in prompt for k in ["zero sugar", "diet only", "no sugar", "sugar free", "health-conscious", "drop high-sugar"]):
         active_sku_ids = [s["sku_id"] for s in all_skus if s.get("sugar_type") in ["Zero Sugar", "Diet", "No Added Sugar"] and s["sku_id"] in active_sku_ids]
+
+    # Category filters
+    if "energy only" in prompt or "only energy" in prompt:
+        active_sku_ids = [s["sku_id"] for s in all_skus if s.get("category") == "Energy" and s["sku_id"] in active_sku_ids]
+    elif "csd only" in prompt or "soda only" in prompt or "only sodas" in prompt:
+        active_sku_ids = [s["sku_id"] for s in all_skus if s.get("category") == "CSD" and s["sku_id"] in active_sku_ids]
+
+    # High margin filter
+    if "high margin" in prompt or "margin >" in prompt:
+        active_sku_ids = [s["sku_id"] for s in all_skus if s.get("margin", 0.0) >= 1.25 and s["sku_id"] in active_sku_ids]
+
+    # Fallback
+    if not active_sku_ids:
+        active_sku_ids = [s["sku_id"] for s in all_skus]
+
+    trace_entry["details"] = f"Goal: {objective.upper()}, Shelves: {shelf_count}, Fixture: {cooler_id}, Filtered Assortment: {len(active_sku_ids)} SKUs."
 
     return {
         "active_objective": objective,
