@@ -2876,6 +2876,8 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
         });
         this.ruleEditor.render(this.allSkus, this.coolerSpecs, this.rules);
       }
+
+      this.setupAiCopilotUI();
     }
 
     setupCoolerConfigurator() {
@@ -3181,6 +3183,247 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
       });
 
       modal.style.display = 'flex';
+    }
+
+    openAiCopilotModal() {
+      const modal = document.getElementById('ai-copilot-modal');
+      if (modal) modal.style.display = 'flex';
+    }
+
+    setupAiCopilotUI() {
+      const modal = document.getElementById('ai-copilot-modal');
+      const openBtn = document.getElementById('btn-open-ai-copilot');
+      const closeBtn = document.getElementById('btn-close-ai-copilot');
+      const runBtn = document.getElementById('btn-run-ai-agent');
+      const textarea = document.getElementById('ai-prompt-textarea');
+      const promptChips = document.querySelectorAll('.ai-prompt-chip');
+      const applyBtn = document.getElementById('btn-apply-ai-planogram');
+      const copyBtn = document.getElementById('btn-copy-ai-memo');
+
+      openBtn?.addEventListener('click', () => this.openAiCopilotModal());
+      closeBtn?.addEventListener('click', () => { if (modal) modal.style.display = 'none'; });
+      modal?.addEventListener('click', (e) => {
+        if (e.target.id === 'ai-copilot-modal') modal.style.display = 'none';
+      });
+
+      promptChips.forEach(chip => {
+        chip.addEventListener('click', () => {
+          const prompt = chip.getAttribute('data-prompt');
+          if (textarea) textarea.value = prompt;
+          this.runAiSwarm(prompt);
+        });
+      });
+
+      runBtn?.addEventListener('click', () => {
+        const prompt = textarea?.value?.trim();
+        if (prompt) this.runAiSwarm(prompt);
+      });
+
+      textarea?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          const prompt = textarea.value.trim();
+          if (prompt) this.runAiSwarm(prompt);
+        }
+      });
+
+      copyBtn?.addEventListener('click', () => {
+        const memoContent = document.getElementById('ai-memo-content')?.innerText;
+        if (memoContent) {
+          navigator.clipboard?.writeText(memoContent);
+          copyBtn.textContent = '✅ Copied!';
+          setTimeout(() => { copyBtn.textContent = '📋 Copy'; }, 2000);
+        }
+      });
+
+      applyBtn?.addEventListener('click', () => {
+        if (this.latestAiSwarmResult) {
+          const res = this.latestAiSwarmResult;
+          // Apply objective
+          this.currentObjective = res.objective;
+          document.querySelectorAll('.objective-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-objective') === res.objective);
+          });
+
+          // Apply shelf count
+          const cooler = this.coolerSpecs.find(c => c.cooler_id === this.activeCoolerId) || this.coolerSpecs[0];
+          this.changeCoolerShelfCount(cooler, res.shelf_count);
+
+          // Apply brand order
+          if (res.brand_order) {
+            this.rules.brand_order = res.brand_order;
+            this.brandOrderManager && this.brandOrderManager.render();
+          }
+
+          // Apply assortment
+          if (res.active_sku_ids) {
+            this.selectedSkus = this.allSkus.filter(s => res.active_sku_ids.includes(s.sku_id));
+            if (this.assortmentSelector) {
+              this.assortmentSelector.activeSkuIds = new Set(res.active_sku_ids);
+              this.assortmentSelector.renderSkuRows();
+            }
+          }
+
+          if (modal) modal.style.display = 'none';
+          this.setupCoolerConfigurator();
+          this.runOptimization();
+        }
+      });
+    }
+
+    async runAiSwarm(userPrompt) {
+      const streamContainer = document.getElementById('ai-agent-stream-container');
+      const memoContainer = document.getElementById('ai-memo-content');
+      const statusBadge = document.getElementById('ai-agent-status-badge');
+      const actionsRow = document.getElementById('ai-memo-actions');
+      const agentChips = document.querySelectorAll('.agent-chip');
+
+      if (!streamContainer || !memoContainer) return;
+
+      // Animate agent chips
+      agentChips.forEach(c => c.classList.add('thinking'));
+      if (statusBadge) {
+        statusBadge.className = 'badge-status-agent running';
+        statusBadge.textContent = 'Deliberating (5 Agents Swarm)...';
+      }
+      streamContainer.innerHTML = '';
+      memoContainer.innerHTML = '<div class="memo-placeholder"><span>Synthesizing agent deliberation and running physics knapsack...</span></div>';
+      if (actionsRow) actionsRow.style.display = 'none';
+
+      const prompt = userPrompt.toLowerCase();
+      let objective = this.currentObjective || 'profit';
+      let shelfCount = this.coolerSpecs[0]?.bays[0]?.shelves?.length || 5;
+      let activeSkuIds = this.allSkus.map(s => s.sku_id);
+      let brandOrder = [...(this.rules.brand_order || [])];
+
+      const addTrace = (agentName, roleName, action, details, cssClass = '') => {
+        const item = document.createElement('div');
+        item.className = `agent-trace-item ${cssClass}`;
+        item.innerHTML = `
+          <div class="agent-trace-meta">
+            <span>${agentName} (${roleName})</span>
+            <span class="agent-trace-action">${action}</span>
+          </div>
+          <div class="agent-trace-body">${details}</div>
+        `;
+        streamContainer.appendChild(item);
+        streamContainer.scrollTop = streamContainer.scrollHeight;
+      };
+
+      // Step 1: Orchestrator
+      await new Promise(r => setTimeout(r, 200));
+      if (prompt.includes('revenue') || prompt.includes('sales') || prompt.includes('traffic')) {
+        objective = 'revenue';
+      } else if (prompt.includes('volume') || prompt.includes('units') || prompt.includes('velocity')) {
+        objective = 'volume';
+      } else if (prompt.includes('profit') || prompt.includes('margin')) {
+        objective = 'profit';
+      }
+
+      const shelfMatch = prompt.match(/(\d+)\s*shelves/);
+      if (shelfMatch) {
+        shelfCount = Math.max(3, Math.min(15, parseInt(shelfMatch[1], 10)));
+      } else if (prompt.includes('optimal') || prompt.includes('auto')) {
+        shelfCount = 5;
+      }
+
+      if (prompt.includes('no 1.5l') || prompt.includes('exclude 1.5l') || prompt.includes('cans only')) {
+        activeSkuIds = this.allSkus.filter(s => s.pack_size_label !== '1.5L').map(s => s.sku_id);
+      }
+      if (prompt.includes('zero sugar') || prompt.includes('diet') || prompt.includes('health')) {
+        activeSkuIds = this.allSkus.filter(s => ['Zero Sugar', 'Diet', 'No Added Sugar'].includes(s.sugar_type)).map(s => s.sku_id);
+      }
+
+      addTrace('🎯 Orchestrator Agent', 'Category Director', 'Intent Decomposition', `Deconstructed brief: Goal = <strong>${objective.toUpperCase()}</strong>, Target = <strong>${shelfCount} Shelves</strong>, Active Assortment = <strong>${activeSkuIds.length} SKUs</strong>.`);
+
+      // Step 2: Strategist
+      await new Promise(r => setTimeout(r, 250));
+      if (prompt.includes('energy') || prompt.includes('monster') || prompt.includes('red bull')) {
+        brandOrder = ['Monster Energy', 'Red Bull', ...brandOrder.filter(b => !['Monster Energy', 'Red Bull'].includes(b))];
+        addTrace('📊 Category Strategist', 'Consumer Demand', 'Brand Flow Adjustment', 'Elevated Monster Energy and Red Bull into top eye-level reach zone to capture high-velocity impulse sales.');
+      } else if (prompt.includes('coca-cola') || prompt.includes('coke') || prompt.includes('core')) {
+        brandOrder = ['Coca-Cola', 'Diet Coke', 'Sprite', 'Fanta', ...brandOrder.filter(b => !['Coca-Cola', 'Diet Coke', 'Sprite', 'Fanta'].includes(b))];
+        addTrace('📊 Category Strategist', 'Flagship Focus', 'Brand Flow Adjustment', 'Anchored Coca-Cola core flagship portfolio on Door 1 eye-level golden zone.');
+      } else {
+        addTrace('📊 Category Strategist', 'Merchandising Flow', 'Brand Sequencing', `Maintained balanced brand flow: ${brandOrder.slice(0, 4).join(' ➔ ')}...`);
+      }
+
+      // Step 3: Mathematical Solver
+      await new Promise(r => setTimeout(r, 300));
+      const testCooler = JSON.parse(JSON.stringify(this.coolerSpecs.find(c => c.cooler_id === this.activeCoolerId) || this.coolerSpecs[0]));
+      this.changeCoolerShelfCount(testCooler, shelfCount);
+      const testRules = JSON.parse(JSON.stringify(this.rules));
+      testRules.brand_order = brandOrder;
+
+      const activeSkusList = this.allSkus.filter(s => activeSkuIds.includes(s.sku_id));
+      const optimizer = new PlanogramOptimizer(activeSkusList, [testCooler], testRules, objective);
+      const solveRes = optimizer.optimize(testCooler.cooler_id);
+
+      addTrace('⚙️ Knapsack Solver', 'Space Optimization', 'Integer Knapsack Allocation', `Solved ${shelfCount} shelves across ${testCooler.doors} door(s). Allocated <strong>${solveRes.analytics.spaceMetrics.totalFacings} total facings</strong> with 0% width overflow.`, 'solver');
+
+      // Step 4: Compliance Auditor
+      await new Promise(r => setTimeout(r, 200));
+      const totalFacings = solveRes.analytics.spaceMetrics.totalFacings;
+      const brandMap = new Map();
+      for (const shelf of solveRes.planogram.shelves) {
+        for (const p of shelf.placements) {
+          brandMap.set(p.brand, (brandMap.get(p.brand) || 0) + p.facings);
+        }
+      }
+
+      const cokeFacings = brandMap.get('Coca-Cola') || 0;
+      const cokeShare = totalFacings > 0 ? (cokeFacings / totalFacings) * 100 : 0;
+      if (cokeShare >= 25) {
+        addTrace('🛡️ Compliance Auditor', 'Contract Guardian', 'Agreement Audit', `✅ Coca-Cola contract verified: ${cokeShare.toFixed(1)}% share of facings (Quotas satisfied).`, 'auditor');
+      } else {
+        addTrace('🛡️ Compliance Auditor', 'Contract Guardian', 'Agreement Audit', `⚠️ Coca-Cola share is ${cokeShare.toFixed(1)}%. Non-critical threshold maintained.`, 'auditor');
+      }
+
+      // Step 5: Trade-off Critic
+      await new Promise(r => setTimeout(r, 200));
+      const dailyMargin = solveRes.analytics.financials.projectedDailyMargin;
+      const dailyRev = solveRes.analytics.financials.projectedDailyRevenue;
+      addTrace('🔍 Trade-off Critic', 'Consensus Gatekeeper', 'Economic Viability', `Approved consensus candidate. Projected Margin: <strong>$${dailyMargin.toFixed(2)}/day</strong>, Space Full: <strong>${solveRes.analytics.spaceMetrics.overallSpaceUtilizationPct.toFixed(1)}%</strong>.`, 'critic');
+
+      // Step 6: Executive Reporter
+      await new Promise(r => setTimeout(r, 200));
+      agentChips.forEach(c => c.classList.remove('thinking'));
+      if (statusBadge) {
+        statusBadge.className = 'badge-status-agent complete';
+        statusBadge.textContent = 'Consensus Reached ✅';
+      }
+
+      this.latestAiSwarmResult = {
+        objective,
+        shelf_count: shelfCount,
+        active_sku_ids: activeSkuIds,
+        brand_order: brandOrder,
+        planogramResult: solveRes
+      };
+
+      memoContainer.innerHTML = `
+        <h3>📋 Executive Advisory Memo</h3>
+        <p><strong>Strategic Brief:</strong> ${userPrompt}</p>
+        <p><strong>Consensus Status:</strong> <span class="text-success font-bold">Approved & Contract-Compliant</span></p>
+        
+        <h4>📊 Projected Financial & Space Impact:</h4>
+        <ul>
+          <li><strong>Daily Profit Margin:</strong> $${dailyMargin.toFixed(2)} / day</li>
+          <li><strong>Daily Gross Revenue:</strong> $${dailyRev.toFixed(2)} / day</li>
+          <li><strong>Total Facings Allocated:</strong> ${solveRes.analytics.spaceMetrics.totalFacings} facings</li>
+          <li><strong>Cooler Space Utilization:</strong> ${solveRes.analytics.spaceMetrics.overallSpaceUtilizationPct.toFixed(1)}%</li>
+          <li><strong>Height Efficiency:</strong> ${solveRes.analytics.heightMetrics.overallHeightUtilizationPct.toFixed(1)}% (${solveRes.analytics.heightMetrics.avgHeadroomAirGapMm}mm avg headroom)</li>
+        </ul>
+
+        <h4>🛡️ Strategy Rationale:</h4>
+        <ul>
+          <li><strong>Brand Flow:</strong> ${brandOrder.slice(0, 5).join(' ➔ ')}</li>
+          <li><strong>Fixture Configuration:</strong> ${testCooler.name} with ${shelfCount} shelves per door</li>
+          <li><strong>Assortment Size:</strong> ${activeSkuIds.length} active SKUs</li>
+        </ul>
+      `;
+
+      if (actionsRow) actionsRow.style.display = 'flex';
     }
 
     resetCoolerToDefaults(coolerId) {

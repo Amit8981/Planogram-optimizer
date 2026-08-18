@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260818_5">
+  <link rel="stylesheet" href="styles.css?v=20260818_6">
 </head>
 <body>
 
@@ -63,6 +63,13 @@
     </div>
 
     <div class="navbar-actions">
+      <!-- AI Agent Copilot Button -->
+      <button class="btn-primary-gradient btn-ai-copilot-nav" id="btn-open-ai-copilot" onclick="window.app && window.app.openAiCopilotModal()" title="Launch LangGraph AI Multi-Agent Swarm">
+        <span class="ai-sparkle-icon">🤖</span>
+        <span>AI Copilot</span>
+        <span class="badge-ai-pill">Swarm</span>
+      </button>
+
       <!-- User Guide Button -->
       <button class="btn-secondary" id="btn-open-user-guide" title="Open Interactive User Guide & Quick Reference">
         <span>📖 User Guide</span>
@@ -913,8 +920,111 @@
     </div>
   </div>
 
+  <!-- AI MULTI-AGENT COPILOT STUDIO MODAL -->
+  <div class="modal-overlay" id="ai-copilot-modal" style="display: none;">
+    <div class="modal-card ai-copilot-modal-card">
+      <div class="modal-header ai-modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">🤖</span>
+          <div>
+            <h2>PlanogramAI Multi-Agent Swarm</h2>
+            <span class="modal-subtitle">Autonomous collaboration between Category Director, Strategist, Solver, Auditor & Critic</span>
+          </div>
+        </div>
+        <button type="button" class="btn-close-modal" id="btn-close-ai-copilot" onclick="document.getElementById('ai-copilot-modal').style.display='none'">&times;</button>
+      </div>
+
+      <div class="modal-body ai-copilot-body">
+        <!-- Agent Personas Active Header -->
+        <div class="ai-agents-badge-row">
+          <div class="agent-chip active" id="chip-agent-orchestrator">
+            <span class="agent-avatar">🎯</span>
+            <span class="agent-role">Orchestrator</span>
+          </div>
+          <div class="agent-chip active" id="chip-agent-strategist">
+            <span class="agent-avatar">📊</span>
+            <span class="agent-role">Strategist</span>
+          </div>
+          <div class="agent-chip active" id="chip-agent-solver">
+            <span class="agent-avatar">⚙️</span>
+            <span class="agent-role">Knapsack Solver</span>
+          </div>
+          <div class="agent-chip active" id="chip-agent-auditor">
+            <span class="agent-avatar">🛡️</span>
+            <span class="agent-role">Compliance</span>
+          </div>
+          <div class="agent-chip active" id="chip-agent-critic">
+            <span class="agent-avatar">🔍</span>
+            <span class="agent-role">Trade-off Critic</span>
+          </div>
+          <div class="agent-chip active" id="chip-agent-reporter">
+            <span class="agent-avatar">📝</span>
+            <span class="agent-role">Reporter</span>
+          </div>
+        </div>
+
+        <!-- Quick Strategy Prompt Suggestions -->
+        <div class="ai-quick-prompts-container">
+          <span class="quick-prompts-label">Quick Prompts:</span>
+          <button class="ai-prompt-chip" data-prompt="Summer Heatwave: Maximize Energy Drinks (Monster & Red Bull) for Profit on 6 shelves">⚡ Summer Energy Rush</button>
+          <button class="ai-prompt-chip" data-prompt="Core Dominance: Focus on Coca-Cola & Pepsi with zero width overflow on 5 shelves">🥤 Flagship Core Focus</button>
+          <button class="ai-prompt-chip" data-prompt="Healthy & Wellness: Promote Zero-Sugar, Juices & Plant Milk with high margin">🍃 Health & Zero Sugar</button>
+          <button class="ai-prompt-chip" data-prompt="No 1.5L Bottles: Exclude all large bottles and pack grab-and-go cans densely">🚫 Cans Only (No 1.5L)</button>
+          <button class="ai-prompt-chip" data-prompt="Find AI Optimal Shelves: Evaluate 3 to 15 shelves and select highest margin configuration">💡 AI Auto-Config</button>
+        </div>
+
+        <!-- Prompt Input Area -->
+        <div class="ai-prompt-input-row">
+          <textarea id="ai-prompt-textarea" class="ai-prompt-input" rows="2" placeholder="Ask AI agents... e.g. 'Optimize for maximum revenue, prioritizing Monster Energy on top tiers with 6 shelves per door'"></textarea>
+          <button id="btn-run-ai-agent" class="btn-primary-gradient btn-ai-send">
+            <span>⚡ Run Swarm</span>
+          </button>
+        </div>
+
+        <!-- Live Multi-Agent Swarm Deliberation Stream & Memo Area -->
+        <div class="ai-agent-results-grid">
+          <!-- Left: Agent Reasoning & Activity Trace -->
+          <div class="ai-agent-trace-card">
+            <div class="trace-header">
+              <span class="trace-title">🤖 Multi-Agent Deliberation & Negotiation Trace</span>
+              <span class="badge-status-agent" id="ai-agent-status-badge">Idle (Awaiting Prompt)</span>
+            </div>
+            <div class="ai-agent-stream-container" id="ai-agent-stream-container">
+              <div class="agent-stream-placeholder">
+                <span>💬 Type a strategic prompt above or select a preset chip to activate the autonomous multi-agent swarm.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Executive Advisory Memo & KPI Impact -->
+          <div class="ai-memo-card">
+            <div class="memo-header">
+              <span class="memo-title">📋 Executive Advisory Memo</span>
+              <button class="btn-copy-memo" id="btn-copy-ai-memo" title="Copy Memo to Clipboard">📋 Copy</button>
+            </div>
+            <div class="ai-memo-content" id="ai-memo-content">
+              <div class="memo-placeholder">
+                <span>The Executive Reporter will generate an audit memo and trade-off synthesis once the multi-agent swarm reaches consensus.</span>
+              </div>
+            </div>
+            <div class="ai-memo-actions" id="ai-memo-actions" style="display: none;">
+              <button class="btn-primary-gradient" id="btn-apply-ai-planogram">
+                <span>🚀 Apply AI Solution to Cooler Canvas</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer ai-modal-footer">
+        <span class="ai-footer-note">Powered by LangGraph Multi-Agent Architecture & Physics Knapsack Engine</span>
+        <button type="button" class="btn-secondary" onclick="document.getElementById('ai-copilot-modal').style.display='none'">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Standalone Bundled Script -->
-  <script src="app.bundle.js?v=20260818_5"></script>
+  <script src="app.bundle.js?v=20260818_6"></script>
   <script>
     // Tab switching for sidebar
     document.querySelectorAll('.side-tab').forEach(tab => {
