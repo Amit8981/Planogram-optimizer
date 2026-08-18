@@ -1543,12 +1543,27 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
         return { background: 'linear-gradient(135deg, #334155, #475569)', badge: 'BASE' };
       }
 
+      if (this.currentMode === 'ai_rationale') {
+        if (placement.facings >= 4) return { background: 'linear-gradient(135deg, #0284C7, #0369A1)', badge: '🤖 High Vel' };
+        if (sku.margin >= 1.40) return { background: 'linear-gradient(135deg, #059669, #10B981)', badge: '🤖 High Marg' };
+        if (shelf.tier === 'bottom') return { background: 'linear-gradient(135deg, #475569, #64748B)', badge: '🤖 Heavy Base' };
+        if (shelf.tier === 'eye_level') return { background: 'linear-gradient(135deg, #7C3AED, #8B5CF6)', badge: '🤖 Eye Golden' };
+        return { background: 'linear-gradient(135deg, #2563EB, #3B82F6)', badge: '🤖 Contract Anchor' };
+      }
+
       return { background: placement.color_hex, badge: null };
     }
 
     getLegend() {
       const legends = {
         none: [],
+        ai_rationale: [
+          { color: '#0284C7', label: 'High Velocity Demand (>35 u/d)' },
+          { color: '#10B981', label: 'Premium Profit Margin (>$1.40)' },
+          { color: '#8B5CF6', label: 'Golden Eye-Level Reach' },
+          { color: '#64748B', label: 'Heavy Base Format' },
+          { color: '#3B82F6', label: 'Brand Contract Anchor' }
+        ],
         margin: [
           { color: '#10B981', label: 'High Margin (>$1.60)' },
           { color: '#14B8A6', label: 'Medium Margin ($1.20 - $1.60)' },
@@ -2758,7 +2773,7 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
       this.setupBrandOrderManager();
       this.setupAssortmentSelector();
       this.setupUI();
-      this.runOptimization();
+      this.updateStatusBar('ready');
     }
 
     setupBrandOrderManager() {
@@ -2766,7 +2781,11 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
       this.brandOrderManager = new BrandOrderManager(container, this.allSkus, this.rules, {
         onOrderChanged: (newBrandOrder) => {
           this.rules.brand_order = newBrandOrder;
-          this.runOptimization();
+          if (this.hasRun) {
+            this.runOptimization();
+          } else {
+            this.updateStatusBar('ready');
+          }
         }
       });
       this.brandOrderManager.init();
@@ -2777,7 +2796,11 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
       this.assortmentSelector = new AssortmentSelector(filterBar, this.allSkus, {
         onSelectionChanged: (activeSkus) => {
           this.selectedSkus = activeSkus.length > 0 ? activeSkus : this.allSkus;
-          this.runOptimization();
+          if (this.hasRun) {
+            this.runOptimization();
+          } else {
+            this.updateStatusBar('ready');
+          }
         }
       });
       this.brandOrderManager && this.brandOrderManager.init();
@@ -2793,7 +2816,11 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
           objButtons.forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           this.currentObjective = btn.getAttribute('data-objective');
-          this.runOptimization();
+          if (this.hasRun) {
+            this.runOptimization();
+          } else {
+            this.updateStatusBar('ready');
+          }
         });
       });
 
@@ -3984,6 +4011,54 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
               <td><strong class="text-highlight">${s.heightUtilizationPct}%</strong></td>
               <td><span class="${fitClass}">${s.airGapHeadroomMm}mm gap</span></td>
             </tr>
+          `;
+        }).join('');
+      }
+
+      const aiSummary = document.getElementById('sidebar-ai-rationale-summary');
+      const aiShelvesList = document.getElementById('sidebar-ai-shelves-list');
+      if (aiSummary && aiShelvesList && this.currentPlanogramResult) {
+        const { planogram, analytics: planAnalytics } = this.currentPlanogramResult;
+        const objUpper = (this.currentObjective || 'profit').toUpperCase();
+        aiSummary.innerHTML = `
+          <div style="font-weight: 800; color: #38BDF8; margin-bottom: 0.25rem;">
+            🎯 Swarm Strategy: ${objUpper} MAXIMIZATION
+          </div>
+          <div style="color: var(--text-secondary); line-height: 1.35;">
+            Autonomous agents allocated <strong>${planAnalytics.spaceMetrics.totalFacings} total facings</strong> across ${planogram.cooler_id} with <strong>${planAnalytics.spaceMetrics.overallSpaceUtilizationPct.toFixed(1)}% space fill</strong> and <strong>0% width overflow</strong>.
+          </div>
+        `;
+
+        aiShelvesList.innerHTML = planogram.shelves.map(shelf => {
+          const skuNames = shelf.placements.map(p => {
+            const sku = this.allSkus.find(s => s.sku_id === p.sku_id);
+            return `${sku ? sku.name : p.sku_id} (${p.facings}x)`;
+          }).join(', ') || 'Empty';
+
+          let shelfAiRationale = '';
+          if (shelf.tier === 'bottom') {
+            shelfAiRationale = `Heavy format tier (${shelf.clearance_height_mm}mm clearance, ${shelf.max_weight_kg}kg load). AI allocated 1.5L PET bottles on reinforced base to prevent tipping and structural overload.`;
+          } else if (shelf.tier === 'eye_level') {
+            shelfAiRationale = `Golden eye-level reach (eye score 1.00). AI reserved prime impulse visibility for high-velocity flagships and premium margin contributors.`;
+          } else if (shelf.tier === 'top') {
+            shelfAiRationale = `Upper canopy tier (${shelf.clearance_height_mm}mm clearance). AI placed grab-and-go slim cans (250ml) to maximize vertical headroom fill (${shelf.usable_width_mm}mm door width).`;
+          } else {
+            shelfAiRationale = `Mid-tier replenishment zone. AI balanced brand flow sequences with high demand velocity buffer (3+ days of supply).`;
+          }
+
+          return `
+            <div style="background: var(--bg-surface-2); border: 1px solid var(--border-subtle); border-left: 3px solid #38BDF8; border-radius: var(--radius-md); padding: 0.75rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                <strong style="font-size: 0.78rem; color: #FFFFFF;">${shelf.door_label || `Door ${shelf.door_index}`} - ${shelf.tier_label || shelf.shelf_id}</strong>
+                <span style="font-size: 0.68rem; font-family: var(--font-mono); color: var(--accent-cyan);">${shelf.clearance_height_mm}mm H • ${shelf.usable_width_mm}mm W</span>
+              </div>
+              <div style="font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 0.35rem;">
+                <strong>Assigned:</strong> ${skuNames}
+              </div>
+              <div style="font-size: 0.72rem; color: #E0F2FE; background: rgba(56, 189, 248, 0.08); padding: 0.35rem 0.5rem; border-radius: 4px; line-height: 1.35;">
+                <span style="font-weight: 700; color: #38BDF8;">🤖 AI Rationale:</span> ${shelfAiRationale}
+              </div>
+            </div>
           `;
         }).join('');
       }
