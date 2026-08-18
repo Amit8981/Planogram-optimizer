@@ -776,6 +776,72 @@ def _run_optimization_core(all_skus, cooler, rules, objective, filters, custom_b
                 door_allocations[cur_shelf_id]['used_wt'] += pwt
                 f_remaining -= f_to_place
 
+        # STAGE 3.5: No-Empty-Shelf Guarantee
+        # In any condition, no door and shelf should ever be completely empty.
+        for shelf in tier_shelves:
+            alloc = door_allocations[shelf['shelf_id']]
+            if len(alloc['placements']) == 0:
+                fallback_pool = [item['sku'] for item in selected]
+                if not fallback_pool:
+                    fallback_pool = eligible_skus
+                if not fallback_pool:
+                    fallback_pool = [s for s in skus if s.get('inclusion_priority') != 'must_not_have' and s['dimensions_mm']['height'] <= shelf['clearance_height_mm']]
+
+                if fallback_pool:
+                    brand_rank_map = {b: idx for idx, b in enumerate(master_brand_order)}
+                    fallback_pool.sort(key=lambda s: (brand_rank_map.get(s['brand'], 999), -s.get('margin', 0.0)))
+
+                    for sku in fallback_pool:
+                        units_deep = max(1, int(shelf['usable_depth_mm'] // sku['dimensions_mm']['depth']))
+                        w = sku['dimensions_mm']['width']
+                        wt = (units_deep * sku['weight_g']) / 1000.0
+
+                        avail_w = shelf['usable_width_mm'] - alloc['used_w']
+                        avail_wt = shelf['max_weight_kg'] - alloc['used_wt']
+                        max_fit = int(min(avail_w // w, avail_wt // wt if wt > 0 else 999))
+
+                        if max_fit > 0:
+                            f_to_place = min(max_fit, max(sku.get('min_facings', 1), min(max_fit, 3)))
+                            pw = f_to_place * w
+                            pwt = f_to_place * wt
+                            x_offset = alloc['used_w']
+
+                            alloc['placements'].append({
+                                'sku_id': sku['sku_id'],
+                                'sku_name': sku['name'],
+                                'brand': sku['brand'],
+                                'category': sku['category'],
+                                'flavor': sku['flavor'],
+                                'pack_type': sku['pack_type'],
+                                'pack_size_label': sku['pack_size_label'],
+                                'sugar_type': sku['sugar_type'],
+                                'facings': f_to_place,
+                                'width_mm': w,
+                                'total_placement_width_mm': pw,
+                                'x_offset_mm': x_offset,
+                                'color_hex': sku.get('color_hex', '#3B82F6'),
+                                'image_emoji': sku.get('image_emoji', '🥤'),
+                                'units_deep': units_deep
+                            })
+                            alloc['used_w'] += pw
+                            alloc['used_wt'] += pwt
+
+                    # Expand to fill available shelf width
+                    if len(alloc['placements']) > 0:
+                        for p in alloc['placements']:
+                            sku = next((s for s in fallback_pool if s['sku_id'] == p['sku_id']), None)
+                            if not sku:
+                                continue
+                            units_deep = p['units_deep']
+                            w = p['width_mm']
+                            wt = (units_deep * sku['weight_g']) / 1000.0
+
+                            while (alloc['used_w'] + w <= shelf['usable_width_mm']) and (alloc['used_wt'] + wt <= shelf['max_weight_kg']):
+                                p['facings'] += 1
+                                p['total_placement_width_mm'] += w
+                                alloc['used_w'] += w
+                                alloc['used_wt'] += wt
+
         # Process each door shelf in this tier
         for shelf in tier_shelves:
             alloc = door_allocations[shelf['shelf_id']]

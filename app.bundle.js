@@ -1033,6 +1033,91 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
           }
         }
 
+        // STAGE 3.5: No-Empty-Shelf Guarantee
+        // In any condition, no door and shelf should ever be completely empty.
+        // If other SKUs of the primary pack size are unavailable, fill with available SKUs (e.g. Coke 1.5L)
+        for (const shelf of tierShelves) {
+          const alloc = doorAllocations[shelf.shelf_id];
+          if (alloc.placements.length === 0) {
+            let fallbackPool = selected.map(item => item.sku);
+            if (fallbackPool.length === 0) {
+              fallbackPool = eligibleSkus;
+            }
+            if (fallbackPool.length === 0) {
+              fallbackPool = this.skus.filter(s => 
+                s.inclusion_priority !== 'must_not_have' && 
+                s.dimensions_mm.height <= shelf.clearance_height_mm
+              );
+            }
+
+            if (fallbackPool.length > 0) {
+              const brandRankMap = new Map(masterBrandOrder.map((b, idx) => [b, idx]));
+              fallbackPool.sort((a, b) => {
+                const r1 = brandRankMap.has(a.brand) ? brandRankMap.get(a.brand) : 999;
+                const r2 = brandRankMap.has(b.brand) ? brandRankMap.get(b.brand) : 999;
+                if (r1 !== r2) return r1 - r2;
+                return (b.margin || 0) - (a.margin || 0);
+              });
+
+              for (const sku of fallbackPool) {
+                const unitsDeep = Math.max(1, Math.floor(shelf.usable_depth_mm / sku.dimensions_mm.depth));
+                const w = sku.dimensions_mm.width;
+                const wt = (unitsDeep * sku.weight_g) / 1000.0;
+
+                const availW = shelf.usable_width_mm - alloc.usedW;
+                const availWt = shelf.max_weight_kg - alloc.usedWt;
+                const maxFit = Math.floor(Math.min(availW / w, wt > 0 ? availWt / wt : 999));
+
+                if (maxFit > 0) {
+                  const fToPlace = Math.min(maxFit, Math.max(sku.min_facings || 1, Math.min(maxFit, 3)));
+                  const pw = fToPlace * w;
+                  const pwt = fToPlace * wt;
+                  const xOffset = alloc.usedW;
+
+                  alloc.placements.push({
+                    sku_id: sku.sku_id,
+                    sku_name: sku.name,
+                    brand: sku.brand,
+                    category: sku.category,
+                    flavor: sku.flavor,
+                    pack_type: sku.pack_type,
+                    pack_size_label: sku.pack_size_label,
+                    sugar_type: sku.sugar_type,
+                    facings: fToPlace,
+                    width_mm: w,
+                    total_placement_width_mm: pw,
+                    x_offset_mm: xOffset,
+                    color_hex: sku.color_hex || '#3B82F6',
+                    image_emoji: sku.image_emoji || '🥤',
+                    units_deep: unitsDeep
+                  });
+
+                  alloc.usedW += pw;
+                  alloc.usedWt += pwt;
+                }
+              }
+
+              // Greedily expand facings to fill the door shelf up to usable width
+              if (alloc.placements.length > 0) {
+                for (const p of alloc.placements) {
+                  const sku = fallbackPool.find(s => s.sku_id === p.sku_id);
+                  if (!sku) continue;
+                  const unitsDeep = p.units_deep;
+                  const w = p.width_mm;
+                  const wt = (unitsDeep * sku.weight_g) / 1000.0;
+
+                  while (alloc.usedW + w <= shelf.usable_width_mm && alloc.usedWt + wt <= shelf.max_weight_kg) {
+                    p.facings += 1;
+                    p.total_placement_width_mm += w;
+                    alloc.usedW += w;
+                    alloc.usedWt += wt;
+                  }
+                }
+              }
+            }
+          }
+        }
+
         // Push final shelves
         for (const shelf of tierShelves) {
           const alloc = doorAllocations[shelf.shelf_id];
