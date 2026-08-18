@@ -1847,6 +1847,38 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
 
       if (newFacings <= 0) {
         shelf.placements.splice(placementIndex, 1);
+        // No-Empty-Shelf: If shelf becomes empty, fill with sibling door SKU on same tier (e.g. Coke 1.5L)
+        if (shelf.placements.length === 0) {
+          const tierIndex = shelf.shelf_index;
+          const siblingShelf = this.planogram.shelves.find(s => s.shelf_index === tierIndex && s.shelf_id !== shelfId && s.placements.length > 0);
+          if (siblingShelf && siblingShelf.placements.length > 0) {
+            const siblingPlacement = siblingShelf.placements[0];
+            const siblingSku = this.skus.find(s => s.sku_id === siblingPlacement.sku_id);
+            if (siblingSku) {
+              const unitsDeep = siblingPlacement.units_deep || Math.max(1, Math.floor(shelf.usable_depth_mm / siblingSku.dimensions_mm.depth));
+              const w = siblingSku.dimensions_mm.width;
+              const maxFit = Math.floor(shelf.usable_width_mm / w);
+              const fCount = Math.min(maxFit, Math.max(1, siblingPlacement.facings));
+              shelf.placements.push({
+                sku_id: siblingSku.sku_id,
+                sku_name: siblingSku.name,
+                brand: siblingSku.brand,
+                category: siblingSku.category,
+                flavor: siblingSku.flavor,
+                pack_type: siblingSku.pack_type,
+                pack_size_label: siblingSku.pack_size_label,
+                sugar_type: siblingSku.sugar_type,
+                facings: fCount,
+                width_mm: w,
+                total_placement_width_mm: fCount * w,
+                x_offset_mm: 0,
+                color_hex: siblingSku.color_hex || '#3B82F6',
+                image_emoji: siblingSku.image_emoji || '🥤',
+                units_deep: unitsDeep
+              });
+            }
+          }
+        }
       } else {
         p.facings = newFacings;
         p.total_placement_width_mm = p.facings * p.width_mm;
@@ -2662,7 +2694,7 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
       this.setupBrandOrderManager();
       this.setupAssortmentSelector();
       this.setupUI();
-      this.updateStatusBar('ready');
+      this.runOptimization();
     }
 
     setupBrandOrderManager() {
@@ -2670,11 +2702,7 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
       this.brandOrderManager = new BrandOrderManager(container, this.allSkus, this.rules, {
         onOrderChanged: (newBrandOrder) => {
           this.rules.brand_order = newBrandOrder;
-          if (this.hasRun) {
-            this.updateStatusBar('modified');
-          } else {
-            this.updateStatusBar('ready');
-          }
+          this.runOptimization();
         }
       });
       this.brandOrderManager.init();
@@ -2685,13 +2713,10 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
       this.assortmentSelector = new AssortmentSelector(filterBar, this.allSkus, {
         onSelectionChanged: (activeSkus) => {
           this.selectedSkus = activeSkus.length > 0 ? activeSkus : this.allSkus;
-          if (this.hasRun) {
-            this.updateStatusBar('modified');
-          } else {
-            this.updateStatusBar('ready');
-          }
+          this.runOptimization();
         }
       });
+      this.brandOrderManager && this.brandOrderManager.init();
       this.assortmentSelector.init();
     }
 
@@ -2704,11 +2729,7 @@ COOLER-1DOOR-TALL,High-Capacity 1-Door Tall Beverage Cooler,1,850,2150,700,1,Doo
           objButtons.forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           this.currentObjective = btn.getAttribute('data-objective');
-          if (this.hasRun) {
-            this.updateStatusBar('modified');
-          } else {
-            this.updateStatusBar('ready');
-          }
+          this.runOptimization();
         });
       });
 
